@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanWork Visualizer 🍁</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f0f0f;color:#eee;overflow-x:hidden}
+
+    header{padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #252525;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    h1{font-size:1.15rem;font-weight:800;white-space:nowrap;letter-spacing:-0.3px}
+    h1 span{color:#ff6b35}
+    .controls{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+    .tab-btn{padding:5px 11px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#999;cursor:pointer;font-size:0.75rem;font-weight:500;transition:all 0.15s;white-space:nowrap}
+    .tab-btn.active{background:#ff6b35;color:#fff;border-color:#ff6b35}
+    .tab-btn:hover:not(.active){background:#2a2a2a;color:#eee}
+    .icon-btn{padding:5px 10px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#888;cursor:pointer;font-size:0.75rem;white-space:nowrap;transition:all 0.15s}
+    .icon-btn:hover{background:#2a2a2a;color:#eee}
+    .icon-btn.active-mode{background:#1a2a1a;border-color:#52b788;color:#52b788}
+
+    .search-wrap{position:relative;display:flex;align-items:center}
+    #search{padding:5px 26px 5px 28px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#eee;font-size:0.75rem;width:185px;outline:none;transition:border-color 0.2s}
+    #search:focus{border-color:#ff6b35}
+    #search::placeholder{color:#3a3a3a}
+    .s-icon{position:absolute;left:8px;color:#3a3a3a;font-size:0.75rem;pointer-events:none}
+    #clear-btn{position:absolute;right:7px;background:none;border:none;color:#3a3a3a;cursor:pointer;font-size:0.95rem;display:none;padding:0;line-height:1}
+    #clear-btn:hover{color:#ff6b35}
+
+    #subbar{font-size:0.68rem;color:#444;padding:4px 16px;background:#111;border-bottom:1px solid #181818;display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap}
+    #search-status{color:#ff6b35;font-weight:600}
+
+    /* PRESET FILTER CHIPS */
+    #presetbar{display:flex;padding:6px 16px;background:#0d0d0d;border-bottom:1px solid #181818;gap:6px;flex-wrap:wrap;align-items:center}
+    .preset-label{font-size:0.65rem;color:#333;margin-right:2px;white-space:nowrap}
+    .preset-btn{padding:4px 10px;border-radius:12px;border:1px solid #2a2a2a;background:transparent;color:#555;cursor:pointer;font-size:0.68rem;font-weight:500;transition:all 0.15s;white-space:nowrap}
+    .preset-btn:hover{border-color:#ff6b35;color:#ff6b35}
+    .preset-btn.active{background:#ff6b35;color:#fff;border-color:#ff6b35}
+
+    #filterbar{display:none;padding:7px 16px;background:#0d0d0d;border-bottom:1px solid #1a1a1a;gap:14px;flex-wrap:wrap;align-items:center}
+    #filterbar.open{display:flex}
+    .fg{display:flex;align-items:center;gap:7px;font-size:0.7rem;color:#777}
+    .fg label{white-space:nowrap}
+    .rs{-webkit-appearance:none;width:85px;height:3px;border-radius:2px;background:#252525;outline:none;cursor:pointer}
+    .rs::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#ff6b35;cursor:pointer}
+    .rv{color:#ff6b35;font-weight:700;min-width:16px;text-align:center;font-size:0.74rem}
+    .toggle-wrap{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#777;cursor:pointer;user-select:none}
+    .toggle-wrap input{accent-color:#ff6b35;cursor:pointer;width:13px;height:13px}
+    .fr{padding:3px 9px;border-radius:4px;border:1px solid #2a2a2a;background:transparent;color:#555;cursor:pointer;font-size:0.68rem}
+    .fr:hover{color:#eee;border-color:#555}
+
+    /* CATEGORY FILTER CHIPS */
+    #catbar{display:none;padding:6px 16px;background:#0a0a0a;border-bottom:1px solid #181818;gap:5px;flex-wrap:wrap;align-items:center}
+    #catbar.open{display:flex}
+    .cat-label{font-size:0.65rem;color:#333;margin-right:2px;white-space:nowrap}
+    .cat-btn{padding:3px 9px;border-radius:10px;border:1px solid #1e1e1e;background:transparent;color:#444;cursor:pointer;font-size:0.66rem;transition:all 0.15s;white-space:nowrap}
+    .cat-btn:hover{border-color:#666;color:#ccc}
+    .cat-btn.active{background:#1e1e1e;border-color:#555;color:#ddd}
+    .cat-btn.all-active{background:#ff6b35;color:#fff;border-color:#ff6b35}
+
+    /* SIZE MODE */
+    .size-toggle{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#777}
+    .size-toggle select{background:#1e1e1e;border:1px solid #2e2e2e;color:#999;border-radius:4px;padding:2px 6px;font-size:0.7rem;cursor:pointer;outline:none}
+
+    #chart-wrap{position:relative}
+    #chart{display:block;width:100%}
+    #no-results{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#2a2a2a;pointer-events:none}
+    #no-results .big{font-size:2.5rem;margin-bottom:8px}
+
+    /* PANEL */
+    #panel{position:fixed;top:0;right:-440px;width:420px;height:100vh;background:#141414;border-left:1px solid #222;z-index:300;transition:right 0.25s ease;overflow-y:auto;padding:20px 18px}
+    #panel.open{right:0}
+    #panel-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;line-height:1}
+    #panel-close:hover{color:#fff}
+    #panel h2{font-size:0.95rem;color:#fff;margin-bottom:3px;padding-right:22px;line-height:1.35}
+    .p-code{font-size:0.67rem;color:#444;margin-bottom:12px;line-height:1.4}
+    .opp-badge{display:inline-flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #222;border-radius:7px;padding:7px 13px;margin-bottom:12px}
+    .opp-val{font-size:1.4rem;font-weight:800}
+    .opp-lbl{font-size:0.65rem;color:#777;line-height:1.4}
+    .score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .s-label{font-size:0.71rem;color:#888;width:128px;flex-shrink:0}
+    .score-bar-wrap{flex:1;background:#1a1a1a;border-radius:3px;height:6px;overflow:hidden}
+    .score-bar{height:100%;border-radius:3px;transition:width 0.35s ease}
+    .s-val{font-size:0.76rem;font-weight:700;width:20px;text-align:right;flex-shrink:0}
+    .rat-box{background:#0c0c0c;border:1px solid #1a1a1a;border-radius:4px;padding:7px 9px;font-size:0.69rem;color:#777;line-height:1.55;margin-bottom:8px}
+    .rat-box strong{color:#aaa;display:block;margin-bottom:2px;font-size:0.7rem}
+    #panel-link{display:block;margin-top:10px;text-align:center;padding:7px;border:1px solid #2a2a2a;border-radius:5px;color:#777;text-decoration:none;font-size:0.71rem}
+    #panel-link:hover{border-color:#ff6b35;color:#ff6b35}
+    .share-btn{display:block;margin-top:6px;text-align:center;padding:6px;border:1px solid #2a2a2a;border-radius:5px;color:#666;font-size:0.68rem;cursor:pointer;background:none;width:100%;transition:all 0.15s}
+    .share-btn:hover{border-color:#52b788;color:#52b788}
+    .shortlist-btn{display:block;margin-top:6px;text-align:center;padding:6px;border:1px solid #2a2a2a;border-radius:5px;color:#666;font-size:0.68rem;cursor:pointer;background:none;width:100%;transition:all 0.15s}
+    .shortlist-btn:hover{border-color:#f4a261;color:#f4a261}
+    .shortlist-btn.saved{border-color:#f4a261;color:#f4a261;background:#1a1000}
+
+    /* BEST BETS */
+    #bb-panel{position:fixed;top:0;left:-370px;width:350px;height:100vh;background:#141414;border-right:1px solid #222;z-index:300;transition:left 0.25s ease;overflow-y:auto;padding:18px 16px}
+    #bb-panel.open{left:0}
+    #bb-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;line-height:1}
+    #bb-close:hover{color:#fff}
+    #bb-panel h2{font-size:0.9rem;color:#fff;margin-bottom:3px}
+    #bb-panel p{font-size:0.67rem;color:#444;margin-bottom:10px;line-height:1.5}
+    .bb-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+    .bb-tab{padding:3px 9px;border-radius:4px;border:1px solid #2a2a2a;background:transparent;color:#444;cursor:pointer;font-size:0.66rem;transition:all 0.15s}
+    .bb-tab.active{background:#ff6b35;color:#fff;border-color:#ff6b35}
+    .bb-tab:hover:not(.active){color:#eee;border-color:#555}
+    .bb-item{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:5px;margin-bottom:3px;cursor:pointer;transition:background 0.1s}
+    .bb-item:hover{background:#1a1a1a}
+    .bb-rank{font-size:0.65rem;color:#333;width:17px;flex-shrink:0;text-align:right;padding-top:2px}
+    .bb-info{flex:1}
+    .bb-title{font-size:0.74rem;color:#ccc;line-height:1.3;margin-bottom:1px}
+    .bb-sub{font-size:0.63rem;color:#444}
+    .bb-score{font-size:0.78rem;font-weight:700;width:24px;text-align:right;flex-shrink:0}
+
+    /* SHORTLIST PANEL */
+    #sl-panel{position:fixed;top:0;right:-370px;width:350px;height:100vh;background:#141414;border-left:1px solid #222;z-index:310;transition:right 0.25s ease;overflow-y:auto;padding:18px 16px}
+    #sl-panel.open{right:0}
+    #sl-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;line-height:1}
+    #sl-close:hover{color:#fff}
+    #sl-panel h2{font-size:0.9rem;color:#fff;margin-bottom:4px}
+    #sl-panel p{font-size:0.67rem;color:#444;margin-bottom:10px;line-height:1.5}
+    .sl-empty{font-size:0.75rem;color:#333;text-align:center;margin-top:30px}
+    .sl-item{display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid #1e1e1e;border-radius:6px;margin-bottom:5px;cursor:pointer;transition:border-color 0.1s}
+    .sl-item:hover{border-color:#2e2e2e}
+    .sl-remove{background:none;border:none;color:#333;font-size:1rem;cursor:pointer;padding:0;flex-shrink:0;margin-left:auto}
+    .sl-remove:hover{color:#e63946}
+    .sl-export{display:block;margin-top:10px;width:100%;padding:7px;border:1px solid #2a2a2a;border-radius:5px;color:#666;font-size:0.71rem;cursor:pointer;background:none;transition:all 0.15s;text-align:center}
+    .sl-export:hover{border-color:#52b788;color:#52b788}
+
+    /* TOOLTIP */
+    #tooltip{position:fixed;pointer-events:none;background:#131313;border:1px solid #252525;border-radius:8px;padding:10px 12px;font-size:0.74rem;max-width:250px;line-height:1.5;opacity:0;transition:opacity 0.1s;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,0.8)}
+    #tooltip strong{color:#eee;display:block;margin-bottom:2px;font-size:0.78rem}
+    .t-code{font-size:0.63rem;color:#444;margin-bottom:5px}
+    .t-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:4px}
+    .t-box{background:#1a1a1a;border-radius:3px;padding:3px 5px;text-align:center}
+    .tv{font-size:0.82rem;font-weight:700}
+    .tl{font-size:0.57rem;color:#555;margin-top:1px}
+    .t-hint{font-size:0.6rem;color:#333;text-align:center;margin-top:2px}
+
+    /* COMPARE */
+    #compare-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:#141414;border-top:1px solid #252525;padding:8px 16px;z-index:250;align-items:center;gap:10px;flex-wrap:wrap}
+    #compare-bar.open{display:flex}
+    .cmp-label{font-size:0.7rem;color:#555;white-space:nowrap}
+    .cmp-chips{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+    .cmp-chip{padding:4px 10px;border-radius:12px;border:1px solid #2e2e2e;background:#1a1a1a;color:#ccc;font-size:0.68rem;display:flex;align-items:center;gap:6px}
+    .cmp-chip button{background:none;border:none;color:#444;cursor:pointer;font-size:0.85rem;padding:0;line-height:1}
+    .cmp-chip button:hover{color:#e63946}
+    #cmp-go{padding:5px 14px;border-radius:6px;background:#ff6b35;color:#fff;border:none;font-size:0.72rem;cursor:pointer;font-weight:600;white-space:nowrap}
+    #cmp-go:hover{background:#e05a28}
+    #cmp-clear{padding:5px 10px;border-radius:6px;border:1px solid #2a2a2a;background:none;color:#555;font-size:0.72rem;cursor:pointer}
+    #cmp-clear:hover{color:#eee}
+
+    /* COMPARE OVERLAY */
+    #cmp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;overflow-y:auto;padding:20px}
+    #cmp-overlay.open{display:block}
+    #cmp-box{max-width:900px;margin:0 auto;background:#141414;border:1px solid #222;border-radius:10px;padding:20px;position:relative}
+    #cmp-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer}
+    #cmp-close:hover{color:#fff}
+    #cmp-box h2{font-size:0.95rem;color:#fff;margin-bottom:14px}
+    .cmp-grid{display:grid;gap:12px}
+    .cmp-row{display:flex;gap:8px;align-items:center}
+    .cmp-row-label{font-size:0.7rem;color:#555;width:120px;flex-shrink:0}
+    .cmp-col-header{font-size:0.72rem;color:#ccc;font-weight:700;text-align:center;padding:4px;line-height:1.3}
+    .cmp-cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+    .cmp-bar-wrap{width:100%;background:#1a1a1a;border-radius:3px;height:8px;overflow:hidden}
+    .cmp-bar{height:100%;border-radius:3px}
+    .cmp-val{font-size:0.76rem;font-weight:700}
+
+    /* LEGEND */
+    #legend{position:fixed;bottom:12px;left:14px;background:#141414;border:1px solid #1e1e1e;border-radius:6px;padding:6px 10px;font-size:0.65rem;z-index:100}
+    .leg-bar{display:flex;gap:1px;margin-top:3px}
+    .leg-bar div{width:14px;height:6px;border-radius:1px}
+
+    /* DISCLAIMER */
+    #disclaimer{background:#0f0900;border-bottom:1px solid #2e1e00;color:#a06020;font-size:0.67rem;padding:4px 16px;display:flex;align-items:center;gap:8px;line-height:1.5}
+    #disclaimer strong{color:#d07030}
+    #disc-close{margin-left:auto;background:none;border:none;color:#5a3510;font-size:1rem;cursor:pointer;padding:0 3px;flex-shrink:0}
+    #disc-close:hover{color:#ff6b35}
+
+    /* HELP */
+    #help-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;align-items:center;justify-content:center}
+    #help-overlay.open{display:flex}
+    #help-box{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:22px 26px;max-width:530px;width:92%;max-height:88vh;overflow-y:auto;position:relative;line-height:1.6}
+    #help-box h2{font-size:0.95rem;color:#fff;margin-bottom:12px}
+    .hc{position:absolute;top:10px;right:12px;background:none;border:none;color:#555;font-size:1.25rem;cursor:pointer}
+    .hc:hover{color:#fff}
+    .hs{margin-bottom:12px}
+    .hs h3{font-size:0.8rem;font-weight:700;margin-bottom:4px}
+    .hs p,.hs li{font-size:0.72rem;color:#999}
+    .hs ul{padding-left:12px}
+    .hs li{margin-bottom:2px}
+    .pill{display:inline-block;border-radius:3px;padding:1px 5px;font-size:0.63rem;font-weight:700;margin-right:3px}
+    .pg{background:#1a3a20;color:#52b788}.py{background:#3a2800;color:#f4a261}.pr{background:#3a0a00;color:#e63946}
+    hr.hd{border:none;border-top:1px solid #1a1a1a;margin:10px 0}
+    kbd{background:#1a1a1a;padding:1px 5px;border-radius:3px;border:1px solid #252525;font-size:0.63rem}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #2e2e2e;border-radius:6px;padding:7px 16px;font-size:0.72rem;color:#ccc;z-index:999;opacity:0;transition:opacity 0.25s;pointer-events:none}
+    #toast.show{opacity:1}
+  </style>
+</head>
+<body>
+
+<div id="disclaimer">
+  ⚠️ <strong>Study Project:</strong> AI-generated scores for educational purposes only. Not career or immigration advice. Always consult a licensed professional. Data: Statistics Canada NOC 2021 (public domain).
+  <button id="disc-close">×</button>
+</div>
+
+<header>
+  <h1>🍁 CanWork <span>Visualizer</span></h1>
+  <div class="controls">
+    <button class="tab-btn active" data-metric="opportunity_score">⭐ Opportunity</button>
+    <button class="tab-btn" data-metric="ai_risk">🤖 AI Risk</button>
+    <button class="tab-btn" data-metric="newcomer_score">🌍 Newcomer</button>
+    <button class="tab-btn" data-metric="transferability_score">🚀 Transferability</button>
+    <button class="tab-btn" data-metric="demand_score">📈 Demand</button>
+    <button class="tab-btn" data-metric="income_score">💰 Income</button>
+    <button class="tab-btn" data-metric="teer">🎓 TEER</button>
+    <button class="icon-btn" id="bb-btn">🏆 Best Bets</button>
+    <button class="icon-btn" id="filter-btn">⚙️ Filters</button>
+    <button class="icon-btn" id="cat-btn">🗂️ Categories</button>
+    <button class="icon-btn" id="cmp-mode-btn">⚖️ Compare</button>
+    <button class="icon-btn" id="sl-btn">📋 Shortlist <span id="sl-count"></span></button>
+    <div class="search-wrap">
+      <span class="s-icon">🔍</span>
+      <input type="text" id="search" placeholder="Title or NOC code…" autocomplete="off"/>
+      <button id="clear-btn">×</button>
+    </div>
+    <button class="icon-btn" onclick="document.getElementById('help-overlay').classList.add('open')">❓</button>
+  </div>
+</header>
+
+<!-- PRESET FILTER CHIPS -->
+<div id="presetbar">
+  <span class="preset-label">Quick filters:</span>
+  <button class="preset-btn" data-preset="newcomer">🌍 Best for Newcomers</button>
+  <button class="preset-btn" data-preset="low-ai">🛡️ Low AI Risk</button>
+  <button class="preset-btn" data-preset="high-income">💰 High Income</button>
+  <button class="preset-btn" data-preset="in-demand">📈 In Demand</button>
+  <button class="preset-btn" data-preset="safe-transfer">🚀 Transferable + Safe</button>
+  <button class="preset-btn" data-preset="top-opportunity">⭐ Top Opportunity</button>
+  <button class="preset-btn" data-preset="clear">✕ Clear</button>
+</div>
+
+<div id="filterbar">
+  <div class="fg"><label>🤖 AI Risk max</label><input type="range" class="rs" id="f-ai" min="0" max="10" value="10"/><span class="rv" id="f-ai-v">10</span></div>
+  <div class="fg"><label>🌍 Newcomer min</label><input type="range" class="rs" id="f-new" min="0" max="10" value="0"/><span class="rv" id="f-new-v">0</span></div>
+  <div class="fg"><label>📈 Demand min</label><input type="range" class="rs" id="f-dem" min="0" max="10" value="0"/><span class="rv" id="f-dem-v">0</span></div>
+  <div class="fg"><label>💰 Income min</label><input type="range" class="rs" id="f-inc" min="0" max="10" value="0"/><span class="rv" id="f-inc-v">0</span></div>
+  <label class="toggle-wrap"><input type="checkbox" id="show-unscored" checked/> Show unscored</label>
+  <div class="size-toggle">
+    <label>Tile size:</label>
+    <select id="size-mode">
+      <option value="score">By score</option>
+      <option value="equal">Equal</option>
+    </select>
+  </div>
+  <button class="fr" id="reset-f">Reset</button>
+</div>
+
+<!-- CATEGORY CHIPS -->
+<div id="catbar">
+  <span class="cat-label">Category:</span>
+  <button class="cat-btn all-active" data-cat="all">All</button>
+</div>
+
+<div id="subbar">
+  <span id="subtitle-text">Loading…</span>
+  <span id="search-status"></span>
+</div>
+
+<div id="chart-wrap">
+  <div id="chart"></div>
+  <div id="no-results"><div class="big">🔍</div><div>No occupations match.</div></div>
+</div>
+<div id="tooltip"></div>
+<div id="legend">
+  <div style="color:#333">Score 0–10</div>
+  <div class="leg-bar" id="leg-bar"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:2px;color:#333"><span>Low</span><span>High</span></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="panel">
+  <button id="panel-close">×</button>
+  <div id="panel-content"></div>
+</div>
+
+<!-- BEST BETS PANEL -->
+<div id="bb-panel">
+  <button id="bb-close">×</button>
+  <h2>🏆 Top Occupations</h2>
+  <p>Ranked by composite score across all 5 dimensions.</p>
+  <div class="bb-tabs">
+    <button class="bb-tab active" data-bbdim="opportunity_score">⭐ Opportunity</button>
+    <button class="bb-tab" data-bbdim="newcomer_score">🌍 Newcomer</button>
+    <button class="bb-tab" data-bbdim="demand_score">📈 Demand</button>
+    <button class="bb-tab" data-bbdim="income_score">💰 Income</button>
+    <button class="bb-tab" data-bbdim="transferability_score">🚀 Transfer</button>
+  </div>
+  <div id="bb-list"></div>
+</div>
+
+<!-- SHORTLIST PANEL -->
+<div id="sl-panel">
+  <button id="sl-close">×</button>
+  <h2>📋 My Shortlist</h2>
+  <p>Save occupations to compare or export.</p>
+  <div id="sl-list"></div>
+  <button class="sl-export" id="sl-export-btn">⬇️ Export Shortlist as CSV</button>
+</div>
+
+<!-- COMPARE BAR (bottom) -->
+<div id="compare-bar">
+  <span class="cmp-label">⚖️ Compare:</span>
+  <div class="cmp-chips" id="cmp-chips"></div>
+  <button id="cmp-go">Compare →</button>
+  <button id="cmp-clear">Clear</button>
+</div>
+
+<!-- COMPARE OVERLAY -->
+<div id="cmp-overlay">
+  <div id="cmp-box">
+    <button id="cmp-close">×</button>
+    <h2>⚖️ Side-by-Side Comparison</h2>
+    <div id="cmp-content"></div>
+  </div>
+</div>
+
+<!-- HELP -->
+<div id="help-overlay">
+  <div id="help-box">
+    <button class="hc" onclick="document.getElementById('help-overlay').classList.remove('open')">×</button>
+    <h2>📖 How to Use CanWork Visualizer</h2>
+    <div class="hs"><p>Each rectangle = one of <strong>508 Canadian NOC 2021 occupations</strong>. Grouped by category. <strong>Hover</strong> for quick scores · <strong>Click</strong> for full detail panel · click StatCan link to open official page.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>⭐ Opportunity Score</h3><p>Weighted composite: <em>Demand×0.30 + Income×0.25 + Transferability×0.20 + Newcomer×0.15 − AI Risk×0.10</em><br/>Higher = better overall opportunity in Canada.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🌍 Quick Preset Filters</h3><ul><li><strong>Best for Newcomers</strong> — Newcomer ≥ 7, Demand ≥ 7</li><li><strong>Low AI Risk</strong> — AI Risk ≤ 3</li><li><strong>High Income</strong> — Income ≥ 8</li><li><strong>In Demand</strong> — Demand ≥ 8</li><li><strong>Transferable + Safe</strong> — Transferability ≥ 7, AI Risk ≤ 5</li><li><strong>Top Opportunity</strong> — Opportunity Score ≥ 6</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>⚖️ Compare Mode</h3><p>Click "⚖️ Compare" button then click up to 3 tiles to compare side-by-side.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>📋 Shortlist</h3><p>Click any occupation tile → open detail panel → click "Add to Shortlist". Export to CSV anytime.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🗂️ Categories</h3><p>Click "🗂️ Categories" to filter by one of the 10 NOC major groups.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🔍 Tips</h3><ul><li>Tile SIZE reflects the score — bigger = higher score for that dimension</li><li><kbd>/</kbd> focus search · <kbd>Esc</kbd> clear · click tile for full details</li><li>URL updates with filters so you can share/bookmark a filtered view</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs" style="background:#0f0900;border:1px solid #2e1e00;border-radius:5px;padding:9px 11px"><h3 style="color:#d07030">⚠️ Disclaimer</h3><p>AI-generated estimates for <strong>study purposes only</strong>. Not career advice. Verify with a licensed professional.</p></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+function scoreColor(v){
+  if(v<0)return"#1a1a1a";
+  if(v<=3)return d3.interpolateRgb("#1a472a","#52b788")(v/3);
+  if(v<=6)return d3.interpolateRgb("#52b788","#f4a261")((v-3)/3);
+  return d3.interpolateRgb("#f4a261","#c1121f")((v-6)/4);
+}
+function teerColor(t){return{"0":"#7b2d8b","1":"#2d4fd6","2":"#2ea8c4","3":"#c46420","4":"#a89020","5":"#2d8b52"}[t]||"#252525";}
+function contrastColor(hexOrRgb){
+  try{const c=d3.color(hexOrRgb);if(!c)return"#fff";const L=0.2126*(c.r/255)**2.2+0.7152*(c.g/255)**2.2+0.0722*(c.b/255)**2.2;return L>0.22?"rgba(0,0,0,0.85)":"rgba(255,255,255,0.92)";}catch(e){return"#fff";}
+}
+
+const DIMS=[
+  {key:"ai_risk",label:"🤖 AI Risk",rat:"ai_rationale"},
+  {key:"newcomer_score",label:"🌍 Newcomer",rat:"newcomer_rationale"},
+  {key:"transferability_score",label:"🚀 Transferability",rat:"transferability_rationale"},
+  {key:"demand_score",label:"📈 Demand",rat:"demand_rationale"},
+  {key:"income_score",label:"💰 Income",rat:"income_rationale"},
+];
+
+let allData=[],currentMetric="opportunity_score";
+let searchQuery="",fAI=10,fNew=0,fDem=0,fInc=0;
+let showUnscored=true,sizeMode="score";
+let activePreset=null,activeCat="all";
+let compareMode=false,compareList=[];
+let shortlist=[];
+let bbDim="opportunity_score";
+
+// --- TOAST ---
+function showToast(msg,dur=1800){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),dur);
+}
+
+// --- SHORTLIST ---
+function updateShortlistCount(){
+  const el=document.getElementById("sl-count");
+  el.textContent=shortlist.length>0?` (${shortlist.length})`:"";
+}
+function isInShortlist(slug){return shortlist.some(s=>s.slug===slug);}
+function toggleShortlist(d){
+  if(isInShortlist(d.slug)){
+    shortlist=shortlist.filter(s=>s.slug!==d.slug);
+    showToast("Removed from shortlist");
+  } else {
+    if(shortlist.length>=20){showToast("Shortlist max 20");return;}
+    shortlist.push(d);
+    showToast("Added to shortlist ✓");
+  }
+  updateShortlistCount();
+  renderShortlist();
+}
+function renderShortlist(){
+  const el=document.getElementById("sl-list");
+  if(!shortlist.length){el.innerHTML='<div class="sl-empty">No occupations saved yet.<br/>Click any tile → Add to Shortlist.</div>';return;}
+  el.innerHTML=shortlist.map(d=>`
+    <div class="sl-item" onclick="openPanel(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+      <div style="flex:1">
+        <div style="font-size:0.74rem;color:#ccc;line-height:1.3">${d.title}</div>
+        <div style="font-size:0.62rem;color:#444;margin-top:2px">NOC ${d.code} · Opp: <span style="color:${scoreColor(d.opportunity_score)}">${d.opportunity_score||'—'}</span></div>
+      </div>
+      <button class="sl-remove" onclick="event.stopPropagation();removeFromShortlist('${d.slug}')">×</button>
+    </div>`).join("");
+}
+function removeFromShortlist(slug){
+  shortlist=shortlist.filter(s=>s.slug!==slug);
+  updateShortlistCount();renderShortlist();
+}
+function exportShortlist(){
+  if(!shortlist.length){showToast("Shortlist is empty");return;}
+  const headers=["Title","NOC Code","TEER","Category","Opportunity","AI Risk","Newcomer","Transferability","Demand","Income"];
+  const rows=shortlist.map(d=>[
+    `"${d.title}"`,d.code,d.teer,`"${d.category_label}"`,
+    d.opportunity_score,d.ai_risk,d.newcomer_score,d.transferability_score,d.demand_score,d.income_score
+  ].join(","));
+  const csv=[headers.join(","),...rows].join("\n");
+  const a=document.createElement("a");
+  a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
+  a.download="canwork_shortlist.csv";a.click();
+  showToast("CSV downloaded ✓");
+}
+
+// --- COMPARE ---
+function toggleCompareMode(){
+  compareMode=!compareMode;
+  const btn=document.getElementById("cmp-mode-btn");
+  btn.classList.toggle("active-mode",compareMode);
+  if(!compareMode){compareList=[];renderCompareBar();}
+  showToast(compareMode?"Compare mode ON — click up to 3 tiles":"Compare mode off");
+}
+function addToCompare(d){
+  if(compareList.find(c=>c.slug===d.slug)){showToast("Already in compare");return;}
+  if(compareList.length>=3){showToast("Max 3 occupations to compare");return;}
+  compareList.push(d);renderCompareBar();
+  showToast(`Added: ${d.title.slice(0,30)}…`);
+}
+function renderCompareBar(){
+  const bar=document.getElementById("compare-bar");
+  const chips=document.getElementById("cmp-chips");
+  chips.innerHTML=compareList.map(d=>`
+    <div class="cmp-chip">
+      <span>${d.title.length>35?d.title.slice(0,33)+"…":d.title}</span>
+      <button onclick="removeFromCompare('${d.slug}')">×</button>
+    </div>`).join("");
+  bar.classList.toggle("open",compareList.length>0);
+}
+function removeFromCompare(slug){compareList=compareList.filter(c=>c.slug!==slug);renderCompareBar();}
+function openCompare(){
+  if(compareList.length<2){showToast("Add at least 2 occupations to compare");return;}
+  const overlay=document.getElementById("cmp-overlay");
+  const content=document.getElementById("cmp-content");
+  const allDims=[{key:"opportunity_score",label:"⭐ Opportunity"},...DIMS];
+  let html=`<div style="display:grid;grid-template-columns:120px ${compareList.map(()=>"1fr").join(" ")};gap:8px;margin-bottom:16px">`;
+  html+=`<div></div>${compareList.map(d=>`<div class="cmp-col-header">${d.title}<br/><span style="font-size:0.6rem;color:#444">NOC ${d.code}</span></div>`).join("")}`;
+  allDims.forEach(dim=>{
+    html+=`<div class="cmp-row-label">${dim.label}</div>`;
+    compareList.forEach(d=>{
+      const v=d[dim.key];const c=v>=0?scoreColor(v):"#333";
+      html+=`<div class="cmp-cell"><div class="cmp-bar-wrap"><div class="cmp-bar" style="width:${v>=0?v*10:0}%;background:${c}"></div></div><div class="cmp-val" style="color:${c}">${v>=0?v:"—"}</div></div>`;
+    });
+  });
+  html+="</div>";
+  content.innerHTML=html;overlay.classList.add("open");
+}
+
+// --- PRESET FILTERS ---
+const PRESETS={
+  "newcomer":{fNew:7,fDem:7,label:"🌍 Best for Newcomers"},
+  "low-ai":{fAI:3,label:"🛡️ Low AI Risk"},
+  "high-income":{fInc:8,label:"💰 High Income"},
+  "in-demand":{fDem:8,label:"📈 In Demand"},
+  "safe-transfer":{fAI:5,fTransfer:7,label:"🚀 Transferable + Safe"},
+  "top-opportunity":{minOpp:6,label:"⭐ Top Opportunity"},
+};
+let fTransfer=0,minOpp=0;
+
+function applyPreset(name){
+  if(name==="clear"||activePreset===name){
+    activePreset=null;
+    fAI=10;fNew=0;fDem=0;fInc=0;fTransfer=0;minOpp=0;
+    document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("active"));
+    syncSliders();renderTreemap();return;
+  }
+  activePreset=name;
+  const p=PRESETS[name];
+  fAI=p.fAI!==undefined?p.fAI:10;
+  fNew=p.fNew!==undefined?p.fNew:0;
+  fDem=p.fDem!==undefined?p.fDem:0;
+  fInc=p.fInc!==undefined?p.fInc:0;
+  fTransfer=p.fTransfer!==undefined?p.fTransfer:0;
+  minOpp=p.minOpp!==undefined?p.minOpp:0;
+  document.querySelectorAll(".preset-btn").forEach(b=>b.classList.toggle("active",b.dataset.preset===name));
+  syncSliders();renderTreemap();
+  showToast(p.label+" applied");
+}
+function syncSliders(){
+  [["f-ai","f-ai-v",fAI],["f-new","f-new-v",fNew],["f-dem","f-dem-v",fDem],["f-inc","f-inc-v",fInc]].forEach(([id,vid,v])=>{
+    const el=document.getElementById(id);if(el)el.value=v;
+    const vel=document.getElementById(vid);if(vel)vel.textContent=v;
+  });
+}
+
+// --- URL SHARE ---
+function updateURL(){
+  const p=new URLSearchParams();
+  if(fAI<10)p.set("ai",fAI);
+  if(fNew>0)p.set("new",fNew);
+  if(fDem>0)p.set("dem",fDem);
+  if(fInc>0)p.set("inc",fInc);
+  if(searchQuery)p.set("q",searchQuery);
+  if(activeCat!=="all")p.set("cat",activeCat);
+  if(activePreset)p.set("preset",activePreset);
+  const qs=p.toString();
+  history.replaceState(null,"",qs?"?"+qs:window.location.pathname);
+}
+function loadFromURL(){
+  const p=new URLSearchParams(window.location.search);
+  if(p.has("ai")){fAI=+p.get("ai");}
+  if(p.has("new")){fNew=+p.get("new");}
+  if(p.has("dem")){fDem=+p.get("dem");}
+  if(p.has("inc")){fInc=+p.get("inc");}
+  if(p.has("q")){searchQuery=p.get("q");document.getElementById("search").value=searchQuery;document.getElementById("clear-btn").style.display="block";}
+  if(p.has("cat")){activeCat=p.get("cat");}
+  if(p.has("preset")){activePreset=p.get("preset");const btn=document.querySelector(`.preset-btn[data-preset="${activePreset}"]`);if(btn)btn.classList.add("active");}
+  syncSliders();
+}
+
+function isScored(d){return d.opportunity_score!==undefined&&d.opportunity_score>=0;}
+function isBadScore(d){if(!isScored(d))return false;const vals=[d.ai_risk,d.newcomer_score,d.transferability_score,d.demand_score,d.income_score];return vals.every(v=>v===0);}
+
+function getFiltered(){
+  return allData.filter(d=>{
+    if(isBadScore(d))return false;
+    if(!isScored(d))return showUnscored;
+    if(searchQuery){const q=searchQuery.toLowerCase();if(!d.title.toLowerCase().includes(q)&&!d.code.includes(q)&&!d.category_label.toLowerCase().includes(q))return false;}
+    if(activeCat!=="all"&&d.category_label!==activeCat)return false;
+    if(d.ai_risk>fAI)return false;
+    if(d.newcomer_score<fNew)return false;
+    if(d.demand_score<fDem)return false;
+    if(d.income_score<fInc)return false;
+    if(fTransfer>0&&d.transferability_score<fTransfer)return false;
+    if(minOpp>0&&d.opportunity_score<minOpp)return false;
+    return true;
+  });
+}
+
+function getTileWeight(d){
+  if(sizeMode==="equal")return 1;
+  if(currentMetric==="teer")return 1;
+  const v=d[currentMetric];
+  if(v===undefined||v<0)return 0.5;
+  return Math.max(0.5,v);
+}
+
+function openPanel(d){
+  const scored=isScored(d)&&!isBadScore(d);
+  const opp=scored?d.opportunity_score:"—";
+  const oppColor=scored?scoreColor(d.opportunity_score):"#333";
+  const inSL=isInShortlist(d.slug);
+  let html=`
+    <div class="opp-badge">
+      <div class="opp-val" style="color:${oppColor}">${opp}</div>
+      <div class="opp-lbl">⭐ Opportunity<br/>Score / 10</div>
+    </div>
+    <h2>${d.title}</h2>
+    <div class="p-code">NOC ${d.code} · TEER ${d.teer} · ${d.teer_label}<br/>${d.category_label}</div>`;
+
+  if(!scored){
+    html+=`<div class="rat-box" style="color:#444">This occupation has not been scored yet or returned invalid data.</div>`;
+  } else {
+    DIMS.forEach(dim=>{
+      const v=d[dim.key];const color=scoreColor(v>=0?v:0);const rat=d[dim.rat]||"";
+      html+=`
+        <div class="score-row">
+          <div class="s-label">${dim.label}</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:${v>=0?v*10:0}%;background:${color}"></div></div>
+          <div class="s-val" style="color:${color}">${v>=0?v:"—"}</div>
+        </div>
+        ${rat?`<div class="rat-box"><strong>${dim.label}</strong>${rat}</div>`:""}`;
+    });
+  }
+  html+=`<a href="${d.url}" target="_blank" id="panel-link">🔗 View on Statistics Canada →</a>
+    <button class="share-btn" onclick="shareOccupation('${d.code}','${d.title.replace(/'/g,"\'")}')">🔗 Copy share link</button>
+    <button class="shortlist-btn ${inSL?'saved':''}" id="sl-toggle-btn" onclick="toggleShortlist(window._panelData)">
+      ${inSL?'★ In Shortlist':'☆ Add to Shortlist'}
+    </button>`;
+  window._panelData=d;
+  document.getElementById("panel-content").innerHTML=html;
+  document.getElementById("panel").classList.add("open");
+  if(compareMode)addToCompare(d);
+}
+
+function shareOccupation(code,title){
+  const url=window.location.origin+window.location.pathname+"?q="+encodeURIComponent(code);
+  navigator.clipboard.writeText(url).then(()=>showToast("Link copied ✓")).catch(()=>showToast("Copy: "+url));
+}
+
+function renderBestBets(){
+  const list=document.getElementById("bb-list");
+  const sorted=allData.filter(d=>isScored(d)&&!isBadScore(d)).sort((a,b)=>b[bbDim]-a[bbDim]).slice(0,25);
+  list.innerHTML=sorted.map((nd,i)=>`
+    <div class="bb-item" onclick="openPanel(this._d);document.getElementById('bb-panel').classList.remove('open')" data-i="${i}">
+      <div class="bb-rank">${i+1}</div>
+      <div class="bb-info">
+        <div class="bb-title">${nd.title}</div>
+        <div class="bb-sub">NOC ${nd.code} · ${nd.category_label.split(" ")[0]}</div>
+      </div>
+      <div class="bb-score" style="color:${scoreColor(nd[bbDim])}">${nd[bbDim]}</div>
+    </div>`).join("");
+  sorted.forEach((nd,i)=>{
+    const el=list.querySelectorAll(".bb-item")[i];
+    if(el)el._d=nd;
+  });
+}
+
+fetch("data.json").then(r=>r.json()).then(json=>{
+  allData=json.nodes;
+  const meta=json.meta;
+  const scored=allData.filter(d=>isScored(d)&&!isBadScore(d)).length;
+  document.getElementById("subtitle-text").textContent=`${meta.total_occupations} NOC 2021 · ${scored} scored · ${meta.source} · Last: ${meta.last_scored||"—"}`;
+
+  // Legend
+  const bar=document.getElementById("leg-bar");
+  for(let i=0;i<=10;i++){const el=document.createElement("div");el.style.background=scoreColor(i);bar.appendChild(el);}
+
+  // Category chips
+  const cats=[...new Set(allData.map(d=>d.category_label))].sort();
+  const catbar=document.getElementById("catbar");
+  cats.forEach(cat=>{
+    const btn=document.createElement("button");
+    btn.className="cat-btn";btn.textContent=cat;btn.dataset.cat=cat;
+    btn.onclick=()=>{
+      activeCat=activeCat===cat?"all":cat;
+      document.querySelectorAll(".cat-btn").forEach(b=>{
+        b.classList.toggle("all-active",b.dataset.cat==="all"&&activeCat==="all");
+        b.classList.toggle("active",b.dataset.cat===activeCat&&activeCat!=="all");
+      });
+      updateURL();renderTreemap();
+    };
+    catbar.appendChild(btn);
+  });
+
+  loadFromURL();
+  renderBestBets();
+  renderTreemap();
+
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");currentMetric=btn.dataset.metric;renderTreemap();
+    };
+  });
+
+  // BB tabs
+  document.querySelectorAll(".bb-tab").forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll(".bb-tab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");bbDim=btn.dataset.bbdim;renderBestBets();
+    };
+  });
+
+  // Controls
+  document.getElementById("bb-btn").onclick=()=>{document.getElementById("bb-panel").classList.toggle("open");document.getElementById("panel").classList.remove("open");renderBestBets();};
+  document.getElementById("filter-btn").onclick=()=>document.getElementById("filterbar").classList.toggle("open");
+  document.getElementById("cat-btn").onclick=()=>document.getElementById("catbar").classList.toggle("open");
+  document.getElementById("cmp-mode-btn").onclick=toggleCompareMode;
+  document.getElementById("cmp-go").onclick=openCompare;
+  document.getElementById("cmp-clear").onclick=()=>{compareList=[];renderCompareBar();};
+  document.getElementById("cmp-close").onclick=()=>document.getElementById("cmp-overlay").classList.remove("open");
+  document.getElementById("sl-btn").onclick=()=>{document.getElementById("sl-panel").classList.toggle("open");};
+  document.getElementById("sl-close").onclick=()=>document.getElementById("sl-panel").classList.remove("open");
+  document.getElementById("sl-export-btn").onclick=exportShortlist;
+  document.getElementById("panel-close").onclick=()=>document.getElementById("panel").classList.remove("open");
+  document.getElementById("bb-close").onclick=()=>document.getElementById("bb-panel").classList.remove("open");
+  document.getElementById("disc-close").onclick=()=>document.getElementById("disclaimer").style.display="none";
+  document.getElementById("help-overlay").onclick=function(e){if(e.target===this)this.classList.remove("open");};
+  document.getElementById("cmp-overlay").onclick=function(e){if(e.target===this)this.classList.remove("open");};
+  document.getElementById("size-mode").onchange=function(){sizeMode=this.value;renderTreemap();};
+
+  // Filters
+  [["f-ai","f-ai-v",v=>fAI=+v],["f-new","f-new-v",v=>fNew=+v],["f-dem","f-dem-v",v=>fDem=+v],["f-inc","f-inc-v",v=>fInc=+v]].forEach(([id,vid,fn])=>{
+    document.getElementById(id).oninput=function(){document.getElementById(vid).textContent=this.value;fn(this.value);activePreset=null;document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("active"));updateURL();renderTreemap();};
+  });
+  document.getElementById("show-unscored").onchange=function(){showUnscored=this.checked;renderTreemap();};
+  document.getElementById("reset-f").onclick=()=>{
+    fAI=10;fNew=0;fDem=0;fInc=0;fTransfer=0;minOpp=0;showUnscored=true;sizeMode="score";activePreset=null;activeCat="all";
+    document.getElementById("show-unscored").checked=true;
+    document.getElementById("size-mode").value="score";
+    document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".cat-btn").forEach(b=>{b.classList.toggle("all-active",b.dataset.cat==="all");b.classList.remove("active");});
+    syncSliders();updateURL();renderTreemap();
+  };
+
+  // Preset buttons
+  document.querySelectorAll(".preset-btn").forEach(btn=>{
+    btn.onclick=()=>{applyPreset(btn.dataset.preset);updateURL();};
+  });
+
+  // Search
+  const sEl=document.getElementById("search"),cBtn=document.getElementById("clear-btn");
+  sEl.oninput=()=>{searchQuery=sEl.value.trim();cBtn.style.display=searchQuery?"block":"none";updateURL();renderTreemap();};
+  cBtn.onclick=()=>{sEl.value="";searchQuery="";cBtn.style.display="none";updateURL();renderTreemap();sEl.focus();};
+  document.addEventListener("keydown",e=>{
+    if(e.key==="/"&&document.activeElement!==sEl){e.preventDefault();sEl.focus();}
+    if(e.key==="Escape"&&document.activeElement===sEl){sEl.value="";searchQuery="";cBtn.style.display="none";updateURL();renderTreemap();sEl.blur();}
+    if(e.key==="Escape"&&document.getElementById("cmp-overlay").classList.contains("open")){document.getElementById("cmp-overlay").classList.remove("open");}
+  });
+
+  renderShortlist();
+});
+
+function getGroupKey(d){return currentMetric==="teer"?`TEER ${d.teer} — ${d.teer_label}`:d.category_label;}
+
+function renderTreemap(){
+  updateURL();
+  const filtered=getFiltered();
+  const total=allData.filter(d=>!isBadScore(d)).length;
+  const active=fAI<10||fNew>0||fDem>0||fInc>0||fTransfer>0||minOpp>0||searchQuery||!showUnscored||activeCat!=="all";
+  document.getElementById("search-status").textContent=active?`${filtered.length} of ${total} shown`:"";
+  document.getElementById("no-results").style.display=filtered.length===0?"block":"none";
+
+  const container=document.getElementById("chart");
+  container.innerHTML="";
+  if(filtered.length===0)return;
+
+  const W=window.innerWidth;
+  const topOffset=container.getBoundingClientRect().top;
+  const H=Math.max(420,window.innerHeight-topOffset);
+  container.style.height=H+"px";
+
+  const grouped=d3.group(filtered,d=>getGroupKey(d));
+  const root=d3.hierarchy({children:Array.from(grouped,([k,v])=>({name:k,children:v}))})
+    .sum(d=>d.children?0:getTileWeight(d)).sort((a,b)=>b.value-a.value);
+
+  d3.treemap().size([W,H]).paddingOuter(4).paddingInner(1).paddingTop(20).round(true)(root);
+
+  const svg=d3.select("#chart").append("svg").attr("width",W).attr("height",H);
+  const tip=document.getElementById("tooltip");
+
+  (root.children||[]).forEach(cat=>{
+    const cw=cat.x1-cat.x0,ch=cat.y1-cat.y0;
+    svg.append("rect").attr("x",cat.x0).attr("y",cat.y0).attr("width",cw).attr("height",ch)
+      .attr("fill","#111").attr("stroke","#1e1e1e").attr("stroke-width",1).attr("rx",3);
+    if(cw>60){
+      const label=cw<150?cat.data.name.split(/[,&]/)[0].trim():cat.data.name;
+      svg.append("text").attr("x",cat.x0+6).attr("y",cat.y0+14)
+        .attr("font-size","9.5px").attr("fill","#444").attr("font-weight","700").attr("pointer-events","none").text(label);
+    }
+  });
+
+  const leaf=svg.selectAll("g.leaf").data(root.leaves()).join("g")
+    .attr("class","leaf").attr("transform",d=>`translate(${d.x0},${d.y0})`);
+
+  leaf.append("rect")
+    .attr("width",d=>Math.max(0,d.x1-d.x0)).attr("height",d=>Math.max(0,d.y1-d.y0))
+    .attr("fill",d=>{
+      if(currentMetric==="teer")return teerColor(d.data.teer);
+      const v=d.data[currentMetric];return(v===undefined||v<0)?"#191919":scoreColor(v);
+    })
+    .attr("stroke",d=>{
+      if(compareList.find(c=>c.slug===d.data.slug))return"#ff6b35";
+      if(isInShortlist(d.data.slug))return"#f4a261";
+      return"transparent";
+    })
+    .attr("stroke-width",d=>(compareList.find(c=>c.slug===d.data.slug)||isInShortlist(d.data.slug))?2:0)
+    .attr("rx",2).style("cursor","pointer")
+    .each(function(d){
+      if(searchQuery){const q=searchQuery.toLowerCase();if(d.data.title.toLowerCase().includes(q)||d.data.code.includes(q)){d3.select(this).attr("stroke","#fff").attr("stroke-width",2);}}
+    })
+    .on("mousemove",(event,d)=>{
+      const nd=d.data;const sc=isScored(nd)&&!isBadScore(nd);
+      tip.innerHTML=`
+        <strong>${nd.title}</strong>
+        <div class="t-code">NOC ${nd.code} · ${nd.teer_label}</div>
+        ${sc?`<div class="t-scores">
+          ${[["⭐","opportunity_score","Opp"],["🤖","ai_risk","AI Risk"],["🌍","newcomer_score","Newcomer"],["🚀","transferability_score","Transfer"],["📈","demand_score","Demand"],["💰","income_score","Income"]]
+            .map(([ic,k,lb])=>`<div class="t-box"><div class="tv" style="color:${scoreColor(nd[k]>=0?nd[k]:0)}">${nd[k]>=0?nd[k]:"—"}</div><div class="tl">${ic} ${lb}</div></div>`).join("")}
+        </div>`:`<div style="font-size:0.65rem;color:#444;margin:4px 0">Not yet scored</div>`}
+        <div class="t-hint">${compareMode?"Click to add to compare":"Click for details"}</div>`;
+      tip.style.opacity=1;
+      tip.style.left=Math.min(event.clientX+14,window.innerWidth-265)+"px";
+      tip.style.top=Math.min(event.clientY-10,window.innerHeight-215)+"px";
+    })
+    .on("mouseleave",()=>{tip.style.opacity=0;})
+    .on("click",(e,d)=>{
+      if(compareMode){addToCompare(d.data);}
+      else{openPanel(d.data);}
+    });
+
+  leaf.each(function(d){
+    const w=d.x1-d.x0,h=d.y1-d.y0;
+    if(w<28||h<14)return;
+    const bg=currentMetric==="teer"?teerColor(d.data.teer):((d.data[currentMetric]===undefined||d.data[currentMetric]<0)?"#191919":scoreColor(d.data[currentMetric]));
+    const fg=contrastColor(bg);
+    const fontSize=w<55?7.5:w<90?8.5:9.5;
+    const maxChars=Math.max(3,Math.floor(w/(fontSize*0.58)));
+    let label=d.data.title;
+    if(label.length>maxChars)label=label.slice(0,maxChars-1).trimEnd()+"…";
+    const cy=h<28?h/2+fontSize*0.35:(h>44&&currentMetric!=="teer"&&d.data[currentMetric]>=0?h/2-4:h/2+fontSize*0.35);
+    d3.select(this).append("text").attr("x",w/2).attr("y",cy).attr("text-anchor","middle")
+      .attr("font-size",fontSize+"px").attr("font-weight","600").attr("fill",fg).attr("pointer-events","none").text(label);
+    if(h>40&&currentMetric!=="teer"&&d.data[currentMetric]>=0){
+      d3.select(this).append("text").attr("x",w/2).attr("y",h/2+11).attr("text-anchor","middle")
+        .attr("font-size","11px").attr("font-weight","800").attr("fill",fg).attr("opacity","0.8").attr("pointer-events","none").text(d.data[currentMetric]);
+    }
+  });
+}
+
+window.addEventListener("resize",()=>{clearTimeout(window._resizeTimer);window._resizeTimer=setTimeout(renderTreemap,120);});
+</script>
+</body>
+</html>

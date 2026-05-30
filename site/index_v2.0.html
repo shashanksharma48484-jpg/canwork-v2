@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanWork Visualizer 🍁</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f0f0f; color: #eee; }
+    header { padding: 16px 24px; background: #1a1a1a; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.3rem; font-weight: 700; }
+    h1 span { color: #ff6b35; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    button { padding: 6px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #ccc; cursor: pointer; font-size: 0.82rem; transition: all 0.2s; }
+    button.active { background: #ff6b35; color: #fff; border-color: #ff6b35; }
+    button:hover:not(.active) { background: #3a3a3a; }
+
+    /* Search bar */
+    .search-wrap { position: relative; display: flex; align-items: center; }
+    #search {
+      padding: 6px 14px 6px 34px;
+      border-radius: 6px; border: 1px solid #444;
+      background: #2a2a2a; color: #eee;
+      font-size: 0.82rem; width: 220px;
+      outline: none; transition: border-color 0.2s;
+    }
+    #search:focus { border-color: #ff6b35; }
+    #search::placeholder { color: #666; }
+    .search-icon { position: absolute; left: 10px; color: #666; font-size: 0.85rem; pointer-events: none; }
+    #clear-search {
+      position: absolute; right: 8px; color: #666; cursor: pointer;
+      font-size: 1rem; display: none; background: none; border: none; padding: 0;
+    }
+    #clear-search:hover { color: #ff6b35; }
+
+    #subtitle { font-size: 0.78rem; color: #888; padding: 6px 24px; background: #151515; display: flex; justify-content: space-between; align-items: center; }
+    #search-status { color: #ff6b35; font-weight: 600; }
+    #chart { width: 100vw; height: calc(100vh - 96px); }
+    #tooltip {
+      position: fixed; pointer-events: none; background: #1e1e1e;
+      border: 1px solid #444; border-radius: 8px; padding: 12px 16px;
+      font-size: 0.82rem; max-width: 300px; line-height: 1.5;
+      opacity: 0; transition: opacity 0.15s; z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #tooltip h3 { font-size: 0.9rem; margin-bottom: 6px; color: #fff; }
+    #tooltip .code { font-size: 0.72rem; color: #888; margin-bottom: 8px; }
+    #tooltip .scores { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    #tooltip .score-box { background: #2a2a2a; border-radius: 6px; padding: 6px 8px; text-align: center; }
+    #tooltip .score-box .val { font-size: 1.1rem; font-weight: 700; }
+    #tooltip .score-box .lbl { font-size: 0.68rem; color: #aaa; }
+    #tooltip .rationale { font-size: 0.76rem; color: #bbb; border-top: 1px solid #333; padding-top: 8px; }
+    #legend { position: fixed; bottom: 16px; left: 24px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-size: 0.75rem; }
+    #legend .bar { display: flex; gap: 2px; margin-top: 6px; }
+    #legend .bar div { width: 20px; height: 10px; border-radius: 2px; }
+
+    /* No results */
+    #no-results { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: #555; }
+    #no-results .icon { font-size: 3rem; margin-bottom: 12px; }
+    #no-results p { font-size: 1rem; }
+    #chart-wrap { position: relative; width: 100vw; height: calc(100vh - 96px); }
+
+    #disclaimer {
+      background: #1a1200; border-bottom: 1px solid #664400;
+      color: #f4a261; font-size: 0.74rem; padding: 7px 24px;
+      display: flex; align-items: center; gap: 8px; line-height: 1.5;
+    }
+    #disclaimer strong { color: #ff6b35; }
+    #disclaimer button {
+      margin-left: auto; background: none; border: none;
+      color: #f4a261; font-size: 1.2rem; cursor: pointer;
+      padding: 0 4px; flex-shrink: 0;
+    }
+    #disclaimer button:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <!-- Disclaimer Banner -->
+  <div id="disclaimer">
+    ⚠️ <strong>Study Project Disclaimer:</strong> This tool is built for educational purposes only using publicly available data from Statistics Canada (NOC 2021). Scores are AI-generated and <strong>may not be accurate</strong> — do not rely on this data for career, immigration, or employment decisions. Always consult a licensed career professional or regulated immigration consultant. &nbsp;|&nbsp; Data sourced from public domain for study use only.
+    <button onclick="document.getElementById('disclaimer').style.display='none'" title="Dismiss">×</button>
+  </div>
+<header>
+  <h1>🍁 CanWork <span>Visualizer</span></h1>
+  <div class="controls">
+    <button class="active" data-metric="exposure">🤖 AI Exposure</button>
+    <button data-metric="newcomer_score">🌍 Newcomer Entry</button>
+    <button data-metric="pivot_score">🔄 Career Pivot</button>
+    <button data-metric="teer">🎓 TEER Level</button>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search" placeholder="Search title or NOC code…" autocomplete="off" />
+      <button id="clear-search" title="Clear search">×</button>
+    </div>
+  </div>
+</header>
+<div id="subtitle">
+  <span id="subtitle-text">Loading...</span>
+  <span id="search-status"></span>
+</div>
+<div id="chart-wrap">
+  <div id="chart"></div>
+  <div id="no-results">
+    <div class="icon">🔍</div>
+    <p>No occupations match your search.</p>
+  </div>
+</div>
+<div id="tooltip"></div>
+<div id="legend">
+  <div style="color:#aaa">Score scale (0–10)</div>
+  <div class="bar" id="legend-bar"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:3px"><span>0 Low</span><span>10 High</span></div>
+</div>
+
+<script>
+function scoreColor(val) {
+  if (val < 0) return "#2a2a2a";
+  if (val <= 3) return d3.interpolateRgb("#1a472a","#52b788")(val/3);
+  if (val <= 6) return d3.interpolateRgb("#52b788","#f4a261")((val-3)/3);
+  return d3.interpolateRgb("#f4a261","#c1121f")((val-6)/4);
+}
+function teerColor(teer) {
+  const map = {"0":"#9b5de5","1":"#4361ee","2":"#4cc9f0","3":"#f8961e","4":"#f9c74f","5":"#90be6d"};
+  return map[teer] || "#555";
+}
+
+let currentMetric = "exposure";
+let allData = [];
+let searchQuery = "";
+
+// Search filter
+function getFilteredData() {
+  if (!searchQuery) return allData;
+  const q = searchQuery.toLowerCase();
+  return allData.filter(d =>
+    d.title.toLowerCase().includes(q) ||
+    d.code.toLowerCase().includes(q) ||
+    d.category_label.toLowerCase().includes(q)
+  );
+}
+
+function updateSearchStatus(filtered, total) {
+  const el = document.getElementById("search-status");
+  if (searchQuery) {
+    el.textContent = `${filtered} of ${total} occupations shown`;
+  } else {
+    el.textContent = "";
+  }
+  document.getElementById("no-results").style.display = filtered === 0 ? "block" : "none";
+}
+
+fetch("data.json").then(r => r.json()).then(json => {
+  allData = json.nodes;
+  const meta = json.meta;
+  const scored = allData.filter(d => d.exposure >= 0).length;
+  document.getElementById("subtitle-text").textContent =
+    `${meta.total_occupations} NOC 2021 occupations · ${scored} scored · Source: ${meta.source}`;
+
+  // Legend
+  const bar = document.getElementById("legend-bar");
+  for (let i = 0; i <= 10; i++) {
+    const d = document.createElement("div");
+    d.style.background = scoreColor(i);
+    bar.appendChild(d);
+  }
+
+  renderTreemap();
+
+  // Metric buttons
+  document.querySelectorAll("[data-metric]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-metric]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentMetric = btn.dataset.metric;
+      renderTreemap();
+    });
+  });
+
+  // Search input
+  const searchEl = document.getElementById("search");
+  const clearBtn = document.getElementById("clear-search");
+
+  searchEl.addEventListener("input", () => {
+    searchQuery = searchEl.value.trim();
+    clearBtn.style.display = searchQuery ? "block" : "none";
+    renderTreemap();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    searchEl.value = "";
+    searchQuery = "";
+    clearBtn.style.display = "none";
+    renderTreemap();
+    searchEl.focus();
+  });
+
+  // Keyboard shortcut: / to focus search
+  document.addEventListener("keydown", e => {
+    if (e.key === "/" && document.activeElement !== searchEl) {
+      e.preventDefault();
+      searchEl.focus();
+    }
+    if (e.key === "Escape") {
+      searchEl.value = "";
+      searchQuery = "";
+      clearBtn.style.display = "none";
+      renderTreemap();
+      searchEl.blur();
+    }
+  });
+});
+
+function renderTreemap() {
+  const filtered = getFilteredData();
+  updateSearchStatus(filtered.length, allData.length);
+
+  const container = document.getElementById("chart");
+  container.innerHTML = "";
+  if (filtered.length === 0) return;
+
+  const W = container.clientWidth || window.innerWidth;
+  const H = container.clientHeight || (window.innerHeight - 96);
+
+  // Group by category
+  const grouped = d3.group(filtered, d => d.category_label);
+  const root = d3.hierarchy({ children: Array.from(grouped, ([key, values]) => ({ name: key, children: values })) })
+    .sum(d => d.children ? 0 : 1)
+    .sort((a, b) => b.value - a.value);
+
+  d3.treemap().size([W, H]).paddingOuter(4).paddingInner(2).paddingTop(18)(root);
+
+  const svg = d3.select("#chart").append("svg").attr("width", W).attr("height", H);
+  const tooltip = document.getElementById("tooltip");
+
+  // Category labels
+  const cats = root.children || [];
+  cats.forEach(cat => {
+    svg.append("rect")
+      .attr("x", cat.x0).attr("y", cat.y0)
+      .attr("width", cat.x1 - cat.x0).attr("height", cat.y1 - cat.y0)
+      .attr("fill", "#1a1a1a").attr("stroke", "#333").attr("stroke-width", 1);
+    svg.append("text")
+      .attr("x", cat.x0 + 6).attr("y", cat.y0 + 13)
+      .attr("font-size", "10px").attr("fill", "#888").attr("font-weight", "600")
+      .text(cat.data.name);
+  });
+
+  // Leaf nodes
+  const leaf = svg.selectAll("g.leaf")
+    .data(root.leaves())
+    .join("g").attr("class", "leaf")
+    .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+  leaf.append("rect")
+    .attr("width", d => Math.max(0, d.x1 - d.x0))
+    .attr("height", d => Math.max(0, d.y1 - d.y0))
+    .attr("fill", d => {
+      if (currentMetric === "teer") return teerColor(d.data.teer);
+      return scoreColor(d.data[currentMetric]);
+    })
+    .attr("stroke", d => {
+      // Highlight search matches
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (d.data.title.toLowerCase().includes(q) || d.data.code.toLowerCase().includes(q)) {
+          return "#fff";
+        }
+      }
+      return "#0f0f0f";
+    })
+    .attr("stroke-width", d => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (d.data.title.toLowerCase().includes(q) || d.data.code.toLowerCase().includes(q)) return 2;
+      }
+      return 0.5;
+    })
+    .attr("rx", 2)
+    .style("cursor", "pointer")
+    .on("mousemove", (event, d) => {
+      const nd = d.data;
+      const metric = currentMetric === "teer" ? "teer" : currentMetric;
+      tooltip.innerHTML = `
+        <h3>${nd.title}</h3>
+        <div class="code">NOC ${nd.code} · ${nd.teer_label}</div>
+        <div class="scores">
+          <div class="score-box"><div class="val" style="color:${scoreColor(nd.exposure)}">${nd.exposure < 0 ? "—" : nd.exposure}</div><div class="lbl">AI Exposure</div></div>
+          <div class="score-box"><div class="val" style="color:${scoreColor(nd.newcomer_score)}">${nd.newcomer_score < 0 ? "—" : nd.newcomer_score}</div><div class="lbl">Newcomer</div></div>
+          <div class="score-box"><div class="val" style="color:${scoreColor(nd.pivot_score)}">${nd.pivot_score < 0 ? "—" : nd.pivot_score}</div><div class="lbl">Pivot</div></div>
+        </div>
+        <div class="rationale">${nd.exposure_rationale || "Not yet scored"}</div>`;
+      tooltip.style.opacity = 1;
+      tooltip.style.left = (event.clientX + 16) + "px";
+      tooltip.style.top = Math.min(event.clientY - 10, window.innerHeight - 200) + "px";
+    })
+    .on("mouseleave", () => { tooltip.style.opacity = 0; })
+    .on("click", (event, d) => { if (d.data.url) window.open(d.data.url, "_blank"); });
+
+  // Labels inside tiles
+  leaf.append("text")
+    .attr("x", 4).attr("y", 13)
+    .attr("font-size", "9px").attr("fill", "#fff").attr("opacity", 0.85)
+    .attr("pointer-events", "none")
+    .text(d => {
+      const w = d.x1 - d.x0;
+      if (w < 40) return "";
+      return d.data.title.length > 20 ? d.data.title.slice(0, 18) + "…" : d.data.title;
+    });
+}
+
+window.addEventListener("resize", renderTreemap);
+</script>
+</body>
+</html>

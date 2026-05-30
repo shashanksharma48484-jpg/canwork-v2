@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanWork Visualizer 🍁</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f0f0f; color: #eee; }
+    header { padding: 16px 24px; background: #1a1a1a; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.3rem; font-weight: 700; }
+    h1 span { color: #ff6b35; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { padding: 6px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #ccc; cursor: pointer; font-size: 0.82rem; transition: all 0.2s; }
+    button.active { background: #ff6b35; color: #fff; border-color: #ff6b35; }
+    button:hover:not(.active) { background: #3a3a3a; }
+    #subtitle { font-size: 0.78rem; color: #888; padding: 6px 24px; background: #151515; }
+    #chart { width: 100vw; height: calc(100vh - 90px); }
+    #tooltip {
+      position: fixed; pointer-events: none; background: #1e1e1e;
+      border: 1px solid #444; border-radius: 8px; padding: 12px 16px;
+      font-size: 0.82rem; max-width: 300px; line-height: 1.5;
+      opacity: 0; transition: opacity 0.15s; z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #tooltip h3 { font-size: 0.9rem; margin-bottom: 6px; color: #fff; }
+    #tooltip .code { font-size: 0.72rem; color: #888; margin-bottom: 8px; }
+    #tooltip .scores { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    #tooltip .score-box { background: #2a2a2a; border-radius: 6px; padding: 6px 8px; text-align: center; }
+    #tooltip .score-box .val { font-size: 1.1rem; font-weight: 700; }
+    #tooltip .score-box .lbl { font-size: 0.68rem; color: #aaa; }
+    #tooltip .rationale { font-size: 0.76rem; color: #bbb; border-top: 1px solid #333; padding-top: 8px; }
+    #legend { position: fixed; bottom: 16px; left: 24px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-size: 0.75rem; }
+    #legend .bar { display: flex; gap: 2px; margin-top: 6px; }
+    #legend .bar div { width: 20px; height: 10px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🍁 CanWork <span>Visualizer</span></h1>
+  <div class="controls">
+    <button class="active" data-metric="exposure">🤖 AI Exposure</button>
+    <button data-metric="newcomer_score">🌍 Newcomer Entry</button>
+    <button data-metric="pivot_score">🔄 Career Pivot</button>
+    <button data-metric="teer">🎓 TEER Level</button>
+  </div>
+</header>
+<div id="subtitle">Loading...</div>
+<div id="chart"></div>
+<div id="tooltip"></div>
+<div id="legend">
+  <div style="color:#aaa">Score scale (0–10)</div>
+  <div class="bar" id="legend-bar"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:3px"><span>0 Low</span><span>10 High</span></div>
+</div>
+
+<script>
+const COLORS = {
+  low:  ["#1a472a","#2d6a4f","#52b788","#b7e4c7"],
+  mid:  ["#e9c46a","#f4a261"],
+  high: ["#e76f51","#c1121f","#780000"],
+};
+
+function scoreColor(val) {
+  if (val < 0) return "#2a2a2a";
+  if (val <= 3) return d3.interpolateRgb("#1a472a","#52b788")(val/3);
+  if (val <= 6) return d3.interpolateRgb("#52b788","#f4a261")((val-3)/3);
+  return d3.interpolateRgb("#f4a261","#c1121f")((val-6)/4);
+}
+
+function teerColor(teer) {
+  const map = {"0":"#9b5de5","1":"#4361ee","2":"#4cc9f0","3":"#f8961e","4":"#f9c74f","5":"#90be6d"};
+  return map[teer] || "#555";
+}
+
+let currentMetric = "exposure";
+let data = [];
+
+fetch("data.json").then(r => r.json()).then(json => {
+  data = json.nodes;
+  document.getElementById("subtitle").textContent =
+    `${json.meta.title} · ${json.meta.total_occupations} NOC 2021 occupations · Source: ${json.meta.source} · Scored: ${json.meta.scored_occupations}`;
+  render();
+});
+
+function getColor(d) {
+  if (currentMetric === "teer") return teerColor(d.teer);
+  return scoreColor(d[currentMetric]);
+}
+
+function getValue(d) {
+  return 1; // equal size tiles — change to d.jobs if you add employment data
+}
+
+function render() {
+  const container = document.getElementById("chart");
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+  d3.select("#chart").selectAll("*").remove();
+
+  const root = d3.hierarchy({ children: data })
+    .sum(getValue)
+    .sort((a,b) => b.value - a.value);
+
+  d3.treemap().size([W, H]).padding(1).round(true)(root);
+
+  const svg = d3.select("#chart").append("svg")
+    .attr("width", W).attr("height", H);
+
+  const cell = svg.selectAll("g")
+    .data(root.leaves())
+    .join("g")
+    .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+  cell.append("rect")
+    .attr("width", d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0)
+    .attr("fill", d => getColor(d.data))
+    .attr("rx", 2)
+    .style("cursor","pointer")
+    .on("mousemove", (event, d) => showTooltip(event, d.data))
+    .on("mouseleave", hideTooltip)
+    .on("click", (event, d) => window.open(d.data.url, "_blank"));
+
+  cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 24)
+    .append("text")
+    .attr("x", 4).attr("y", 14)
+    .attr("font-size", d => Math.min(12, (d.x1-d.x0)/8) + "px")
+    .attr("fill", "#fff")
+    .attr("pointer-events","none")
+    .text(d => d.data.title);
+
+  buildLegend();
+}
+
+function showTooltip(event, d) {
+  const tip = document.getElementById("tooltip");
+  const ai = d.exposure >= 0 ? d.exposure : "—";
+  const nw = d.newcomer_score >= 0 ? d.newcomer_score : "—";
+  const pv = d.pivot_score >= 0 ? d.pivot_score : "—";
+  tip.innerHTML = `
+    <h3>${d.title}</h3>
+    <div class="code">NOC ${d.code} · ${d.teer_label} · ${d.category_label}</div>
+    <div class="scores">
+      <div class="score-box"><div class="val" style="color:${scoreColor(d.exposure)}">${ai}</div><div class="lbl">🤖 AI Risk</div></div>
+      <div class="score-box"><div class="val" style="color:${scoreColor(d.newcomer_score)}">${nw}</div><div class="lbl">🌍 Newcomer</div></div>
+      <div class="score-box"><div class="val" style="color:${scoreColor(d.pivot_score)}">${pv}</div><div class="lbl">🔄 Pivot</div></div>
+    </div>
+    ${d.exposure_rationale ? `<div class="rationale">${d.exposure_rationale}</div>` : ""}
+  `;
+  tip.style.opacity = 1;
+  tip.style.left = Math.min(event.clientX + 12, window.innerWidth - 320) + "px";
+  tip.style.top = Math.min(event.clientY + 12, window.innerHeight - 200) + "px";
+}
+
+function hideTooltip() {
+  document.getElementById("tooltip").style.opacity = 0;
+}
+
+function buildLegend() {
+  const bar = document.getElementById("legend-bar");
+  bar.innerHTML = "";
+  for (let i = 0; i <= 10; i++) {
+    const div = document.createElement("div");
+    div.style.background = scoreColor(i);
+    div.style.width = "20px";
+    div.style.height = "10px";
+    div.style.borderRadius = "2px";
+    bar.appendChild(div);
+  }
+}
+
+document.querySelectorAll("button[data-metric]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("button[data-metric]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentMetric = btn.dataset.metric;
+    render();
+  });
+});
+
+window.addEventListener("resize", render);
+</script>
+</body>
+</html>

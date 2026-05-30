@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanWork Visualizer 🍁</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f0f0f;color:#eee;overflow-x:hidden}
+
+    header{padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #252525;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    h1{font-size:1.15rem;font-weight:800;white-space:nowrap;letter-spacing:-0.3px}
+    h1 span{color:#ff6b35}
+    .controls{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+    .tab-btn{padding:5px 11px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#999;cursor:pointer;font-size:0.75rem;font-weight:500;transition:all 0.15s;white-space:nowrap}
+    .tab-btn.active{background:#ff6b35;color:#fff;border-color:#ff6b35}
+    .tab-btn:hover:not(.active){background:#2a2a2a;color:#eee}
+    .icon-btn{padding:5px 10px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#888;cursor:pointer;font-size:0.75rem;white-space:nowrap;transition:all 0.15s}
+    .icon-btn:hover{background:#2a2a2a;color:#eee}
+
+    .search-wrap{position:relative;display:flex;align-items:center}
+    #search{padding:5px 26px 5px 28px;border-radius:6px;border:1px solid #2e2e2e;background:#1e1e1e;color:#eee;font-size:0.75rem;width:185px;outline:none;transition:border-color 0.2s}
+    #search:focus{border-color:#ff6b35}
+    #search::placeholder{color:#3a3a3a}
+    .s-icon{position:absolute;left:8px;color:#3a3a3a;font-size:0.75rem;pointer-events:none}
+    #clear-btn{position:absolute;right:7px;background:none;border:none;color:#3a3a3a;cursor:pointer;font-size:0.95rem;display:none;padding:0;line-height:1}
+    #clear-btn:hover{color:#ff6b35}
+
+    #subbar{font-size:0.68rem;color:#444;padding:4px 16px;background:#111;border-bottom:1px solid #181818;display:flex;justify-content:space-between;align-items:center;gap:4px}
+    #search-status{color:#ff6b35;font-weight:600}
+
+    #filterbar{display:none;padding:7px 16px;background:#0d0d0d;border-bottom:1px solid #1a1a1a;gap:14px;flex-wrap:wrap;align-items:center}
+    #filterbar.open{display:flex}
+    .fg{display:flex;align-items:center;gap:7px;font-size:0.7rem;color:#777}
+    .fg label{white-space:nowrap}
+    .rs{-webkit-appearance:none;width:85px;height:3px;border-radius:2px;background:#252525;outline:none;cursor:pointer}
+    .rs::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#ff6b35;cursor:pointer}
+    .rv{color:#ff6b35;font-weight:700;min-width:16px;text-align:center;font-size:0.74rem}
+    .toggle-wrap{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#777;cursor:pointer;user-select:none}
+    .toggle-wrap input{accent-color:#ff6b35;cursor:pointer;width:13px;height:13px}
+    .fr{padding:3px 9px;border-radius:4px;border:1px solid #2a2a2a;background:transparent;color:#555;cursor:pointer;font-size:0.68rem}
+    .fr:hover{color:#eee;border-color:#555}
+
+    /* SIZE MODE */
+    .size-toggle{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#777}
+    .size-toggle select{background:#1e1e1e;border:1px solid #2e2e2e;color:#999;border-radius:4px;padding:2px 6px;font-size:0.7rem;cursor:pointer;outline:none}
+
+    #chart-wrap{position:relative}
+    #chart{display:block;width:100%}
+    #no-results{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#2a2a2a;pointer-events:none}
+    #no-results .big{font-size:2.5rem;margin-bottom:8px}
+
+    /* PANEL */
+    #panel{position:fixed;top:0;right:-440px;width:420px;height:100vh;background:#141414;border-left:1px solid #222;z-index:300;transition:right 0.25s ease;overflow-y:auto;padding:20px 18px}
+    #panel.open{right:0}
+    #panel-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;line-height:1}
+    #panel-close:hover{color:#fff}
+    #panel h2{font-size:0.95rem;color:#fff;margin-bottom:3px;padding-right:22px;line-height:1.35}
+    .p-code{font-size:0.67rem;color:#444;margin-bottom:12px;line-height:1.4}
+    .opp-badge{display:inline-flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #222;border-radius:7px;padding:7px 13px;margin-bottom:12px}
+    .opp-val{font-size:1.4rem;font-weight:800}
+    .opp-lbl{font-size:0.65rem;color:#777;line-height:1.4}
+    .score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .s-label{font-size:0.71rem;color:#888;width:128px;flex-shrink:0}
+    .score-bar-wrap{flex:1;background:#1a1a1a;border-radius:3px;height:6px;overflow:hidden}
+    .score-bar{height:100%;border-radius:3px;transition:width 0.35s ease}
+    .s-val{font-size:0.76rem;font-weight:700;width:20px;text-align:right;flex-shrink:0}
+    .rat-box{background:#0c0c0c;border:1px solid #1a1a1a;border-radius:4px;padding:7px 9px;font-size:0.69rem;color:#777;line-height:1.55;margin-bottom:8px}
+    .rat-box strong{color:#aaa;display:block;margin-bottom:2px;font-size:0.7rem}
+    #panel-link{display:block;margin-top:10px;text-align:center;padding:7px;border:1px solid #2a2a2a;border-radius:5px;color:#777;text-decoration:none;font-size:0.71rem}
+    #panel-link:hover{border-color:#ff6b35;color:#ff6b35}
+
+    /* BEST BETS */
+    #bb-panel{position:fixed;top:0;left:-350px;width:330px;height:100vh;background:#141414;border-right:1px solid #222;z-index:300;transition:left 0.25s ease;overflow-y:auto;padding:18px 16px}
+    #bb-panel.open{left:0}
+    #bb-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;line-height:1}
+    #bb-close:hover{color:#fff}
+    #bb-panel h2{font-size:0.9rem;color:#fff;margin-bottom:3px}
+    #bb-panel p{font-size:0.67rem;color:#444;margin-bottom:10px;line-height:1.5}
+    .bb-item{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:5px;margin-bottom:3px;cursor:pointer;transition:background 0.1s}
+    .bb-item:hover{background:#1a1a1a}
+    .bb-rank{font-size:0.65rem;color:#333;width:17px;flex-shrink:0;text-align:right;padding-top:2px}
+    .bb-info{flex:1}
+    .bb-title{font-size:0.74rem;color:#ccc;line-height:1.3;margin-bottom:1px}
+    .bb-sub{font-size:0.63rem;color:#444}
+    .bb-score{font-size:0.78rem;font-weight:700;width:24px;text-align:right;flex-shrink:0}
+
+    /* TOOLTIP */
+    #tooltip{position:fixed;pointer-events:none;background:#131313;border:1px solid #252525;border-radius:8px;padding:10px 12px;font-size:0.74rem;max-width:250px;line-height:1.5;opacity:0;transition:opacity 0.1s;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,0.8)}
+    #tooltip strong{color:#eee;display:block;margin-bottom:2px;font-size:0.78rem}
+    .t-code{font-size:0.63rem;color:#444;margin-bottom:5px}
+    .t-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:4px}
+    .t-box{background:#1a1a1a;border-radius:3px;padding:3px 5px;text-align:center}
+    .tv{font-size:0.82rem;font-weight:700}
+    .tl{font-size:0.57rem;color:#555;margin-top:1px}
+    .t-hint{font-size:0.6rem;color:#333;text-align:center;margin-top:2px}
+
+    /* LEGEND */
+    #legend{position:fixed;bottom:12px;left:14px;background:#141414;border:1px solid #1e1e1e;border-radius:6px;padding:6px 10px;font-size:0.65rem;z-index:100}
+    .leg-bar{display:flex;gap:1px;margin-top:3px}
+    .leg-bar div{width:14px;height:6px;border-radius:1px}
+
+    /* DISCLAIMER */
+    #disclaimer{background:#0f0900;border-bottom:1px solid #2e1e00;color:#a06020;font-size:0.67rem;padding:4px 16px;display:flex;align-items:center;gap:8px;line-height:1.5}
+    #disclaimer strong{color:#d07030}
+    #disc-close{margin-left:auto;background:none;border:none;color:#5a3510;font-size:1rem;cursor:pointer;padding:0 3px;flex-shrink:0}
+    #disc-close:hover{color:#ff6b35}
+
+    /* HELP */
+    #help-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;align-items:center;justify-content:center}
+    #help-overlay.open{display:flex}
+    #help-box{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:22px 26px;max-width:530px;width:92%;max-height:88vh;overflow-y:auto;position:relative;line-height:1.6}
+    #help-box h2{font-size:0.95rem;color:#fff;margin-bottom:12px}
+    .hc{position:absolute;top:10px;right:12px;background:none;border:none;color:#555;font-size:1.25rem;cursor:pointer}
+    .hc:hover{color:#fff}
+    .hs{margin-bottom:12px}
+    .hs h3{font-size:0.8rem;font-weight:700;margin-bottom:4px}
+    .hs p,.hs li{font-size:0.72rem;color:#999}
+    .hs ul{padding-left:12px}
+    .hs li{margin-bottom:2px}
+    .pill{display:inline-block;border-radius:3px;padding:1px 5px;font-size:0.63rem;font-weight:700;margin-right:3px}
+    .pg{background:#1a3a20;color:#52b788}.py{background:#3a2800;color:#f4a261}.pr{background:#3a0a00;color:#e63946}
+    hr.hd{border:none;border-top:1px solid #1a1a1a;margin:10px 0}
+    kbd{background:#1a1a1a;padding:1px 5px;border-radius:3px;border:1px solid #252525;font-size:0.63rem}
+  </style>
+</head>
+<body>
+
+<div id="disclaimer">
+  ⚠️ <strong>Study Project:</strong> AI-generated scores for educational purposes only. Not career or immigration advice. Always consult a licensed professional. Data: Statistics Canada NOC 2021 (public domain).
+  <button id="disc-close">×</button>
+</div>
+
+<header>
+  <h1>🍁 CanWork <span>Visualizer</span></h1>
+  <div class="controls">
+    <button class="tab-btn active" data-metric="opportunity_score">⭐ Opportunity</button>
+    <button class="tab-btn" data-metric="ai_risk">🤖 AI Risk</button>
+    <button class="tab-btn" data-metric="newcomer_score">🌍 Newcomer</button>
+    <button class="tab-btn" data-metric="transferability_score">🚀 Transferability</button>
+    <button class="tab-btn" data-metric="demand_score">📈 Demand</button>
+    <button class="tab-btn" data-metric="income_score">💰 Income</button>
+    <button class="tab-btn" data-metric="teer">🎓 TEER</button>
+    <button class="icon-btn" id="bb-btn">🏆 Best Bets</button>
+    <button class="icon-btn" id="filter-btn">⚙️ Filters</button>
+    <div class="search-wrap">
+      <span class="s-icon">🔍</span>
+      <input type="text" id="search" placeholder="Title or NOC code…" autocomplete="off"/>
+      <button id="clear-btn">×</button>
+    </div>
+    <button class="icon-btn" onclick="document.getElementById('help-overlay').classList.add('open')">❓</button>
+  </div>
+</header>
+
+<div id="filterbar">
+  <div class="fg"><label>🤖 AI Risk max</label><input type="range" class="rs" id="f-ai" min="0" max="10" value="10"/><span class="rv" id="f-ai-v">10</span></div>
+  <div class="fg"><label>🌍 Newcomer min</label><input type="range" class="rs" id="f-new" min="0" max="10" value="0"/><span class="rv" id="f-new-v">0</span></div>
+  <div class="fg"><label>📈 Demand min</label><input type="range" class="rs" id="f-dem" min="0" max="10" value="0"/><span class="rv" id="f-dem-v">0</span></div>
+  <div class="fg"><label>💰 Income min</label><input type="range" class="rs" id="f-inc" min="0" max="10" value="0"/><span class="rv" id="f-inc-v">0</span></div>
+  <label class="toggle-wrap"><input type="checkbox" id="show-unscored" checked/> Show unscored</label>
+  <div class="size-toggle">
+    <label>Tile size:</label>
+    <select id="size-mode">
+      <option value="score">By score</option>
+      <option value="equal">Equal</option>
+    </select>
+  </div>
+  <button class="fr" id="reset-f">Reset</button>
+</div>
+
+<div id="subbar">
+  <span id="subtitle-text">Loading…</span>
+  <span id="search-status"></span>
+</div>
+
+<div id="chart-wrap">
+  <div id="chart"></div>
+  <div id="no-results"><div class="big">🔍</div><div>No occupations match.</div></div>
+</div>
+<div id="tooltip"></div>
+<div id="legend">
+  <div style="color:#333">Score 0–10</div>
+  <div class="leg-bar" id="leg-bar"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:2px;color:#333"><span>Low</span><span>High</span></div>
+</div>
+
+<div id="panel">
+  <button id="panel-close">×</button>
+  <div id="panel-content"></div>
+</div>
+
+<div id="bb-panel">
+  <button id="bb-close">×</button>
+  <h2>🏆 Top Opportunity Occupations</h2>
+  <p>Highest composite score — strong demand, good income, transferable skills, newcomer-friendly, low AI displacement risk.</p>
+  <div id="bb-list"></div>
+</div>
+
+<div id="help-overlay">
+  <div id="help-box">
+    <button class="hc" onclick="document.getElementById('help-overlay').classList.remove('open')">×</button>
+    <h2>📖 How to Use CanWork Visualizer</h2>
+    <div class="hs"><p>Each rectangle = one of <strong>508 Canadian NOC 2021 occupations</strong>. Grouped by category. <strong>Hover</strong> for quick scores · <strong>Click</strong> for full detail panel · click StatCan link to open official page.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>⭐ Opportunity Score</h3><p>Weighted composite: <em>Demand×0.30 + Income×0.25 + Transferability×0.20 + Newcomer×0.15 − AI Risk×0.10</em><br/>Higher = better overall opportunity in Canada.</p></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🤖 AI Risk (0–10)</h3><p>How likely AI reshapes/displaces this role by 2030.</p><ul><li><span class="pill pg">0–3</span>Physical work — plumber, nurse, electrician</li><li><span class="pill py">4–6</span>Mixed — manager, teacher, police</li><li><span class="pill pr">7–10</span>Fully digital — data entry, translator</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🌍 Newcomer Accessibility (0–10)</h3><ul><li><span class="pill pg">0–3</span>Regulated — doctor, lawyer, engineer</li><li><span class="pill py">4–6</span>Moderate — bridging programs exist</li><li><span class="pill pr">7–10</span>Open — IT, finance, low barriers</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🚀 Skill Transferability (0–10)</h3><ul><li><span class="pill pg">0–3</span>Specialized — nuclear tech, marine pilot</li><li><span class="pill py">4–6</span>Transferable within related fields</li><li><span class="pill pr">7–10</span>Universal — project manager, analyst</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>📈 Labour Demand (0–10)</h3><ul><li><span class="pill pg">0–3</span>Declining or stagnant</li><li><span class="pill py">4–6</span>Stable average demand</li><li><span class="pill pr">7–10</span>Critical shortage, strong pathways</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>💰 Income Potential (0–10)</h3><p>vs Canadian median ~$62K/yr</p><ul><li><span class="pill pg">0–3</span>Below median — under $35K</li><li><span class="pill py">4–6</span>Near median — $35K–$65K</li><li><span class="pill pr">7–10</span>Above — $65K–$110K+</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🎓 TEER Level</h3><p>Groups treemap by qualification level when active.</p><ul><li>🟣 TEER 0 Management · 🔵 TEER 1 University · 🩵 TEER 2 College 2+yrs</li><li>🟠 TEER 3 College &lt;2yrs · 🟡 TEER 4 High school · 🟢 TEER 5 No formal</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs"><h3>🔍 Tips</h3><ul><li>Tile SIZE reflects the score — bigger = higher score for that dimension</li><li><kbd>/</kbd> focus search · <kbd>Esc</kbd> clear · click tile for full details</li><li>⚙️ Filters let you set min/max thresholds and hide unscored tiles</li></ul></div>
+    <hr class="hd"/>
+    <div class="hs" style="background:#0f0900;border:1px solid #2e1e00;border-radius:5px;padding:9px 11px"><h3 style="color:#d07030">⚠️ Disclaimer</h3><p>AI-generated estimates for <strong>study purposes only</strong>. Not career advice. Verify with a licensed professional.</p></div>
+  </div>
+</div>
+
+<script>
+function scoreColor(v) {
+  if (v < 0) return "#1a1a1a";
+  if (v <= 3) return d3.interpolateRgb("#1a472a","#52b788")(v/3);
+  if (v <= 6) return d3.interpolateRgb("#52b788","#f4a261")((v-3)/3);
+  return d3.interpolateRgb("#f4a261","#c1121f")((v-6)/4);
+}
+function teerColor(t) {
+  return {"0":"#7b2d8b","1":"#2d4fd6","2":"#2ea8c4","3":"#c46420","4":"#a89020","5":"#2d8b52"}[t]||"#252525";
+}
+function contrastColor(hexOrRgb) {
+  try {
+    const c = d3.color(hexOrRgb);
+    if (!c) return "#fff";
+    const L = 0.2126*(c.r/255)**2.2 + 0.7152*(c.g/255)**2.2 + 0.0722*(c.b/255)**2.2;
+    return L > 0.22 ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.92)";
+  } catch(e) { return "#fff"; }
+}
+
+const DIMS = [
+  {key:"ai_risk",               label:"🤖 AI Risk",        rat:"ai_rationale"},
+  {key:"newcomer_score",        label:"🌍 Newcomer",        rat:"newcomer_rationale"},
+  {key:"transferability_score", label:"🚀 Transferability", rat:"transferability_rationale"},
+  {key:"demand_score",          label:"📈 Demand",          rat:"demand_rationale"},
+  {key:"income_score",          label:"💰 Income",          rat:"income_rationale"},
+];
+
+let allData=[], currentMetric="opportunity_score";
+let searchQuery="", fAI=10, fNew=0, fDem=0, fInc=0;
+let showUnscored=true, sizeMode="score";
+
+function isScored(d){ return d.opportunity_score !== undefined && d.opportunity_score >= 0; }
+
+// Detect bad scores: all zeros = LLM got wrong content
+function isBadScore(d) {
+  if (!isScored(d)) return false;
+  const vals = [d.ai_risk, d.newcomer_score, d.transferability_score, d.demand_score, d.income_score];
+  return vals.every(v => v === 0);
+}
+
+function getFiltered() {
+  return allData.filter(d => {
+    if (isBadScore(d)) return false; // hide bad scores
+    if (!isScored(d)) return showUnscored;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!d.title.toLowerCase().includes(q) && !d.code.includes(q) && !d.category_label.toLowerCase().includes(q)) return false;
+    }
+    if (d.ai_risk > fAI) return false;
+    if (d.newcomer_score < fNew) return false;
+    if (d.demand_score < fDem) return false;
+    if (d.income_score < fInc) return false;
+    return true;
+  });
+}
+
+function getTileWeight(d) {
+  if (sizeMode === "equal") return 1;
+  if (currentMetric === "teer") return 1;
+  const v = d[currentMetric];
+  if (v === undefined || v < 0) return 0.5; // unscored gets small tile
+  return Math.max(0.5, v); // scored: weight = score value (min 0.5)
+}
+
+function openPanel(d) {
+  const scored = isScored(d) && !isBadScore(d);
+  const opp = scored ? d.opportunity_score : "—";
+  const oppColor = scored ? scoreColor(d.opportunity_score) : "#333";
+  let html = `
+    <div class="opp-badge">
+      <div class="opp-val" style="color:${oppColor}">${opp}</div>
+      <div class="opp-lbl">⭐ Opportunity<br/>Score / 10</div>
+    </div>
+    <h2>${d.title}</h2>
+    <div class="p-code">NOC ${d.code} · TEER ${d.teer} · ${d.teer_label}<br/>${d.category_label}</div>`;
+
+  if (!scored) {
+    html += `<div class="rat-box" style="color:#444">This occupation has not been scored yet or returned invalid data.</div>`;
+  } else {
+    DIMS.forEach(dim => {
+      const v = d[dim.key];
+      const color = scoreColor(v >= 0 ? v : 0);
+      const rat = d[dim.rat] || "";
+      html += `
+        <div class="score-row">
+          <div class="s-label">${dim.label}</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:${v>=0?v*10:0}%;background:${color}"></div></div>
+          <div class="s-val" style="color:${color}">${v >= 0 ? v : "—"}</div>
+        </div>
+        ${rat ? `<div class="rat-box"><strong>${dim.label}</strong>${rat}</div>` : ""}`;
+    });
+  }
+  html += `<a href="${d.url}" target="_blank" id="panel-link">🔗 View on Statistics Canada →</a>`;
+  document.getElementById("panel-content").innerHTML = html;
+  document.getElementById("panel").classList.add("open");
+}
+
+fetch("data.json").then(r=>r.json()).then(json=>{
+  allData = json.nodes;
+  const meta = json.meta;
+  const scored = allData.filter(d=>isScored(d)&&!isBadScore(d)).length;
+  document.getElementById("subtitle-text").textContent =
+    `${meta.total_occupations} NOC 2021 · ${scored} scored · ${meta.source} · Last: ${meta.last_scored||"—"}`;
+
+  // Legend
+  const bar = document.getElementById("leg-bar");
+  for(let i=0;i<=10;i++){const el=document.createElement("div");el.style.background=scoreColor(i);bar.appendChild(el);}
+
+  // Best Bets — filter bad scores, use full node data for title
+  const bbList = document.getElementById("bb-list");
+  const sortedNodes = allData
+    .filter(d => isScored(d) && !isBadScore(d))
+    .sort((a,b) => b.opportunity_score - a.opportunity_score)
+    .slice(0, 20);
+
+  sortedNodes.forEach((nd, i) => {
+    const el = document.createElement("div");
+    el.className = "bb-item";
+    el.innerHTML = `
+      <div class="bb-rank">${i+1}</div>
+      <div class="bb-info">
+        <div class="bb-title">${nd.title}</div>
+        <div class="bb-sub">NOC ${nd.code} · ${nd.category_label.split(" ")[0]}</div>
+      </div>
+      <div class="bb-score" style="color:${scoreColor(nd.opportunity_score)}">${nd.opportunity_score}</div>`;
+    el.onclick=()=>{ openPanel(nd); document.getElementById("bb-panel").classList.remove("open"); };
+    bbList.appendChild(el);
+  });
+
+  renderTreemap();
+
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      currentMetric=btn.dataset.metric;
+      renderTreemap();
+    };
+  });
+
+  // Controls
+  document.getElementById("bb-btn").onclick=()=>{
+    document.getElementById("bb-panel").classList.toggle("open");
+    document.getElementById("panel").classList.remove("open");
+  };
+  document.getElementById("filter-btn").onclick=()=>document.getElementById("filterbar").classList.toggle("open");
+  document.getElementById("panel-close").onclick=()=>document.getElementById("panel").classList.remove("open");
+  document.getElementById("bb-close").onclick=()=>document.getElementById("bb-panel").classList.remove("open");
+  document.getElementById("disc-close").onclick=()=>document.getElementById("disclaimer").style.display="none";
+  document.getElementById("help-overlay").onclick=function(e){if(e.target===this)this.classList.remove("open");};
+  document.getElementById("size-mode").onchange=function(){sizeMode=this.value;renderTreemap();};
+
+  // Filters
+  [["f-ai","f-ai-v",v=>fAI=+v],["f-new","f-new-v",v=>fNew=+v],
+   ["f-dem","f-dem-v",v=>fDem=+v],["f-inc","f-inc-v",v=>fInc=+v]].forEach(([id,vid,fn])=>{
+    document.getElementById(id).oninput=function(){document.getElementById(vid).textContent=this.value;fn(this.value);renderTreemap();};
+  });
+  document.getElementById("show-unscored").onchange=function(){showUnscored=this.checked;renderTreemap();};
+  document.getElementById("reset-f").onclick=()=>{
+    fAI=10;fNew=0;fDem=0;fInc=0;showUnscored=true;sizeMode="score";
+    document.getElementById("show-unscored").checked=true;
+    document.getElementById("size-mode").value="score";
+    [["f-ai",10],["f-new",0],["f-dem",0],["f-inc",0]].forEach(([id,v])=>{
+      document.getElementById(id).value=v;
+      document.getElementById(id+"-v").textContent=v;
+    });
+    renderTreemap();
+  };
+
+  // Search
+  const sEl=document.getElementById("search"), cBtn=document.getElementById("clear-btn");
+  sEl.oninput=()=>{searchQuery=sEl.value.trim();cBtn.style.display=searchQuery?"block":"none";renderTreemap();};
+  cBtn.onclick=()=>{sEl.value="";searchQuery="";cBtn.style.display="none";renderTreemap();sEl.focus();};
+  document.addEventListener("keydown",e=>{
+    if(e.key==="/"&&document.activeElement!==sEl){e.preventDefault();sEl.focus();}
+    if(e.key==="Escape"){sEl.value="";searchQuery="";cBtn.style.display="none";renderTreemap();sEl.blur();}
+  });
+});
+
+function getGroupKey(d) {
+  return currentMetric === "teer"
+    ? `TEER ${d.teer} — ${d.teer_label}`
+    : d.category_label;
+}
+
+function renderTreemap() {
+  const filtered = getFiltered();
+  const total = allData.filter(d=>!isBadScore(d)).length;
+  const active = fAI<10||fNew>0||fDem>0||fInc>0||searchQuery||!showUnscored;
+  document.getElementById("search-status").textContent = active ? `${filtered.length} of ${total} shown` : "";
+  document.getElementById("no-results").style.display = filtered.length===0?"block":"none";
+
+  const container = document.getElementById("chart");
+  container.innerHTML = "";
+  if(filtered.length===0) return;
+
+  const W = window.innerWidth;
+  const topOffset = container.getBoundingClientRect().top;
+  const H = Math.max(420, window.innerHeight - topOffset);
+  container.style.height = H + "px";
+
+  const grouped = d3.group(filtered, d => getGroupKey(d));
+  const root = d3.hierarchy({
+    children: Array.from(grouped, ([k,v]) => ({name:k, children:v}))
+  })
+  .sum(d => d.children ? 0 : getTileWeight(d))
+  .sort((a,b) => b.value - a.value);
+
+  d3.treemap()
+    .size([W, H])
+    .paddingOuter(4)
+    .paddingInner(1)
+    .paddingTop(20)
+    .round(true)(root);
+
+  const svg = d3.select("#chart").append("svg").attr("width",W).attr("height",H);
+  const tip = document.getElementById("tooltip");
+
+  // Group headers
+  (root.children||[]).forEach(cat => {
+    const cw = cat.x1-cat.x0, ch = cat.y1-cat.y0;
+    svg.append("rect")
+      .attr("x",cat.x0).attr("y",cat.y0).attr("width",cw).attr("height",ch)
+      .attr("fill","#111").attr("stroke","#1e1e1e").attr("stroke-width",1).attr("rx",3);
+    if (cw > 60) {
+      const label = cw < 150 ? cat.data.name.split(/[,&]/)[0].trim() : cat.data.name;
+      svg.append("text")
+        .attr("x",cat.x0+6).attr("y",cat.y0+14)
+        .attr("font-size","9.5px").attr("fill","#444").attr("font-weight","700")
+        .attr("pointer-events","none")
+        .text(label);
+    }
+  });
+
+  // Leaf tiles
+  const leaf = svg.selectAll("g.leaf").data(root.leaves()).join("g")
+    .attr("class","leaf")
+    .attr("transform",d=>`translate(${d.x0},${d.y0})`);
+
+  leaf.append("rect")
+    .attr("width",d=>Math.max(0,d.x1-d.x0))
+    .attr("height",d=>Math.max(0,d.y1-d.y0))
+    .attr("fill",d=>{
+      if (currentMetric==="teer") return teerColor(d.data.teer);
+      const v = d.data[currentMetric];
+      return (v===undefined||v<0) ? "#191919" : scoreColor(v);
+    })
+    .attr("stroke","transparent")
+    .attr("stroke-width",0)
+    .attr("rx",2)
+    .style("cursor","pointer")
+    // search highlight
+    .each(function(d){
+      if(searchQuery){
+        const q=searchQuery.toLowerCase();
+        if(d.data.title.toLowerCase().includes(q)||d.data.code.includes(q)){
+          d3.select(this).attr("stroke","#fff").attr("stroke-width",2);
+        }
+      }
+    })
+    .on("mousemove",(event,d)=>{
+      const nd=d.data;
+      const sc = isScored(nd)&&!isBadScore(nd);
+      tip.innerHTML=`
+        <strong>${nd.title}</strong>
+        <div class="t-code">NOC ${nd.code} · ${nd.teer_label}</div>
+        ${sc ? `<div class="t-scores">
+          ${[["⭐","opportunity_score","Opp"],["🤖","ai_risk","AI Risk"],
+             ["🌍","newcomer_score","Newcomer"],["🚀","transferability_score","Transfer"],
+             ["📈","demand_score","Demand"],["💰","income_score","Income"]]
+            .map(([ic,k,lb])=>`<div class="t-box"><div class="tv" style="color:${scoreColor(nd[k]>=0?nd[k]:0)}">${nd[k]>=0?nd[k]:"—"}</div><div class="tl">${ic} ${lb}</div></div>`).join("")}
+        </div>` : `<div style="font-size:0.65rem;color:#444;margin:4px 0">Not yet scored</div>`}
+        <div class="t-hint">Click for details</div>`;
+      tip.style.opacity=1;
+      tip.style.left=Math.min(event.clientX+14, window.innerWidth-265)+"px";
+      tip.style.top=Math.min(event.clientY-10, window.innerHeight-215)+"px";
+    })
+    .on("mouseleave",()=>{tip.style.opacity=0;})
+    .on("click",(e,d)=>openPanel(d.data));
+
+  // Tile labels — contrast-aware, centered, size-adaptive
+  leaf.each(function(d){
+    const w=d.x1-d.x0, h=d.y1-d.y0;
+    if(w < 28 || h < 14) return;
+
+    const bg = currentMetric==="teer" ? teerColor(d.data.teer) :
+               ((d.data[currentMetric]===undefined||d.data[currentMetric]<0) ? "#191919" : scoreColor(d.data[currentMetric]));
+    const fg = contrastColor(bg);
+
+    const fontSize = w < 55 ? 7.5 : w < 90 ? 8.5 : 9.5;
+    const maxChars = Math.max(3, Math.floor(w / (fontSize * 0.58)));
+    let label = d.data.title;
+    if(label.length > maxChars) label = label.slice(0, maxChars-1).trimEnd()+"…";
+
+    const cy = h < 28 ? h/2 + fontSize*0.35 : (h > 44 && currentMetric!=="teer" && d.data[currentMetric]>=0 ? h/2 - 4 : h/2 + fontSize*0.35);
+
+    d3.select(this).append("text")
+      .attr("x", w/2).attr("y", cy)
+      .attr("text-anchor","middle")
+      .attr("font-size", fontSize+"px")
+      .attr("font-weight","600")
+      .attr("fill", fg)
+      .attr("pointer-events","none")
+      .text(label);
+
+    // Score number below title for taller tiles
+    if(h > 40 && currentMetric!=="teer" && d.data[currentMetric]>=0) {
+      d3.select(this).append("text")
+        .attr("x", w/2).attr("y", h/2 + 11)
+        .attr("text-anchor","middle")
+        .attr("font-size","11px")
+        .attr("font-weight","800")
+        .attr("fill", fg)
+        .attr("opacity","0.8")
+        .attr("pointer-events","none")
+        .text(d.data[currentMetric]);
+    }
+  });
+}
+
+window.addEventListener("resize", () => {
+  clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(renderTreemap, 120);
+});
+</script>
+</body>
+</html>

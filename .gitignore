@@ -1,0 +1,9 @@
+@"
+.venv/
+__pycache__/
+.env
+*.csv
+pages_canada/
+html_canada/
+_archive/
+"@ | Out-File -FilePath .gitignore -Encoding utf8
