@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -199,6 +199,87 @@
     #toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #2e2e2e;border-radius:6px;padding:7px 16px;font-size:0.72rem;color:#ccc;z-index:999;opacity:0;transition:opacity 0.25s;pointer-events:none}
     #toast.show{opacity:1}
 
+    /* ── MOBILE-FIRST HEADER ── */
+    .hdr-top{display:flex;align-items:center;gap:8px;width:100%}
+    .hdr-credit{font-size:0.62rem;color:#333;text-decoration:none;white-space:nowrap;margin-left:auto;transition:color 0.15s}
+    .hdr-credit:hover{color:#ff6b35}
+    .hamburger{display:none;background:none;border:1px solid #2e2e2e;border-radius:6px;color:#888;font-size:1.1rem;cursor:pointer;padding:4px 9px;margin-left:6px;line-height:1}
+    .hamburger:hover{color:#fff;border-color:#555}
+
+    .tab-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;width:100%;padding-bottom:2px}
+    .tab-row::-webkit-scrollbar{display:none}
+    .tab-row .tab-btn{flex-shrink:0}
+
+    .action-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center;width:100%}
+    .highlight-btn{background:#1a1000!important;border-color:#ff6b35!important;color:#ff6b35!important;font-weight:600!important}
+
+    /* ── MOBILE DRAWER ── */
+    .mobile-drawer{position:fixed;bottom:-100%;left:0;right:0;background:#141414;border-top:1px solid #252525;border-radius:16px 16px 0 0;z-index:700;padding:14px 14px 24px;transition:bottom 0.3s ease;max-height:70vh;overflow-y:auto}
+    .mobile-drawer.open{bottom:0}
+    .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:699;pointer-events:none;transition:background 0.3s}
+    .drawer-overlay.open{background:rgba(0,0,0,0.7);pointer-events:all}
+    .drawer-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .drawer-btn{padding:12px 10px;border-radius:9px;border:1px solid #2a2a2a;background:#1a1a1a;color:#aaa;cursor:pointer;font-size:0.8rem;font-weight:500;text-align:center;transition:all 0.15s}
+    .drawer-btn:hover,.drawer-btn:active{background:#252525;color:#fff;border-color:#555}
+    .drawer-btn.highlight-btn{background:#1a1000!important;border-color:#ff6b35!important;color:#ff6b35!important;grid-column:1/-1}
+    .drawer-search{grid-column:1/-1;position:relative}
+
+    /* ── RESPONSIVE BREAKPOINTS ── */
+    @media (max-width:768px){
+      header{padding:10px 12px;gap:7px}
+      .hamburger{display:block}
+      .action-row{display:none} /* hidden — use drawer instead */
+      .tab-btn{font-size:0.72rem;padding:5px 10px}
+
+      /* Panels full width */
+      #panel,#sl-panel{width:100vw;right:-100vw}
+      #panel.open,#sl-panel.open{right:0}
+      #bb-panel{width:100vw;left:-100vw}
+      #bb-panel.open{left:0}
+      #panel{padding:16px 14px 30px}
+
+      /* Filterbar stacked */
+      #filterbar{gap:8px;padding:8px 12px}
+      .rs{width:75px}
+
+      /* Presetbar swipe */
+      #presetbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:5px 12px}
+      #presetbar::-webkit-scrollbar{display:none}
+      .preset-btn{flex-shrink:0}
+
+      /* Catbar swipe */
+      #catbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+      #catbar::-webkit-scrollbar{display:none}
+      .cat-btn{flex-shrink:0}
+
+      /* Subbar */
+      #subbar{font-size:0.63rem;padding:3px 12px;flex-wrap:wrap;gap:3px}
+
+      /* Legend compact */
+      #legend{bottom:8px;left:8px;padding:5px 8px;font-size:0.6rem}
+
+      /* Disclaimer compact */
+      #disclaimer{font-size:0.62rem;padding:4px 12px}
+
+      /* Matcher modal full screen */
+      #matcher-box{max-width:100%;border-radius:12px 12px 0 0;max-height:95vh}
+
+      /* Compare bar */
+      #compare-bar{padding:6px 10px;gap:5px}
+
+      /* Score panel improvements */
+      .s-label{width:90px;font-size:0.67rem}
+      .rat-box{font-size:0.67rem}
+      #panel h2{font-size:0.9rem}
+      .p-code{font-size:0.65rem}
+    }
+
+    @media (max-width:380px){
+      h1{font-size:0.9rem}
+      .tab-btn{font-size:0.67rem;padding:4px 8px}
+    }
+
+
     /* ── NOC MATCHER ── */
     #matcher-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:600;align-items:center;justify-content:center;padding:16px}
     #matcher-overlay.open{display:flex}
@@ -317,21 +398,26 @@
 </div>
 
 <header>
-  <h1>🍁 CanWork <span>Visualizer</span></h1>
-  <a href="https://www.linkedin.com/in/shashank-sharma-canada/" target="_blank" style="font-size:0.65rem;color:#333;text-decoration:none;white-space:nowrap;transition:color 0.15s;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#333'">by Shashank Sharma</a>
-  <div class="controls">
-    <button class="tab-btn active" data-metric="opportunity_score">⭐ Opportunity</button>
+  <div class="hdr-top">
+    <h1>🍁 CanWork <span>Visualizer</span></h1>
+    <a href="https://www.linkedin.com/in/shashank1885" target="_blank" class="hdr-credit">by Shashank Sharma 🍁</a>
+    <button class="hamburger" id="hamburger-btn">☰</button>
+  </div>
+  <div class="tab-row">
+    <button class="tab-btn active" data-metric="opportunity_score">⭐ Opp</button>
     <button class="tab-btn" data-metric="ai_risk">🤖 AI Risk</button>
     <button class="tab-btn" data-metric="newcomer_score">🌍 Newcomer</button>
-    <button class="tab-btn" data-metric="transferability_score">🚀 Transferability</button>
+    <button class="tab-btn" data-metric="transferability_score">🚀 Transfer</button>
     <button class="tab-btn" data-metric="demand_score">📈 Demand</button>
     <button class="tab-btn" data-metric="income_score">💰 Income</button>
     <button class="tab-btn" data-metric="teer">🎓 TEER</button>
+  </div>
+  <div class="action-row" id="action-row">
+    <button class="icon-btn highlight-btn" id="matcher-btn">🎯 Match My NOC</button>
     <button class="icon-btn" id="bb-btn">🏆 Best Bets</button>
     <button class="icon-btn" id="filter-btn">⚙️ Filters</button>
     <button class="icon-btn" id="cat-btn">🗂️ Categories</button>
     <button class="icon-btn" id="cmp-mode-btn">⚖️ Compare</button>
-    <button class="icon-btn" id="matcher-btn" style="background:#1a1000;border-color:#ff6b35;color:#ff6b35;font-weight:600">🎯 Match My NOC</button>
     <button class="icon-btn" id="sl-btn">📋 Shortlist <span id="sl-count"></span></button>
     <div class="search-wrap">
       <span class="s-icon">🔍</span>
@@ -341,6 +427,23 @@
     <button class="icon-btn" onclick="document.getElementById('help-overlay').classList.add('open')">❓</button>
   </div>
 </header>
+
+<div id="mobile-drawer" class="mobile-drawer">
+  <div class="drawer-grid">
+    <button class="drawer-btn highlight-btn" id="drawer-matcher">🎯 Match My NOC</button>
+    <button class="drawer-btn" id="drawer-bb">🏆 Best Bets</button>
+    <button class="drawer-btn" id="drawer-filter">⚙️ Filters</button>
+    <button class="drawer-btn" id="drawer-cat">🗂️ Categories</button>
+    <button class="drawer-btn" id="drawer-compare">⚖️ Compare</button>
+    <button class="drawer-btn" id="drawer-shortlist">📋 Shortlist</button>
+    <button class="drawer-btn" id="drawer-help">❓ Help</button>
+    <div class="drawer-search">
+      <span class="s-icon" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#555">🔍</span>
+      <input type="text" id="search-mobile" placeholder="Search NOC…" autocomplete="off" style="width:100%;padding:8px 10px 8px 30px;border-radius:7px;border:1px solid #2a2a2a;background:#0f0f0f;color:#eee;font-size:0.85rem;outline:none"/>
+    </div>
+  </div>
+</div>
+<div id="drawer-overlay" class="drawer-overlay"></div>
 
 <!-- PRESET FILTER CHIPS -->
 <div id="presetbar">
@@ -391,7 +494,7 @@
   <div class="leg-bar" id="leg-bar"></div>
   <div style="display:flex;justify-content:space-between;margin-top:2px;color:#333"><span>Low</span><span>High</span></div>
   <div style="margin-top:5px;border-top:1px solid #1a1a1a;padding-top:4px;font-size:0.6rem;color:#2a2a2a">
-    <a href="https://www.linkedin.com/in/shashank-sharma-canada/" target="_blank" style="color:#2a2a2a;text-decoration:none;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#2a2a2a'">© Shashank Sharma</a>
+    <a href="https://www.linkedin.com/in/shashank1885" target="_blank" style="color:#2a2a2a;text-decoration:none;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#2a2a2a'">© Shashank Sharma</a>
   </div>
 </div>
 
@@ -1228,6 +1331,46 @@ document.getElementById("m-title").addEventListener("keydown", e => {
 document.getElementById("m-domain").addEventListener("keydown", e => {
   if (e.key === "Enter") runMatcher();
 });
+
+
+// ── MOBILE DRAWER ────────────────────────────────────────────
+function openDrawer(){
+  document.getElementById("mobile-drawer").classList.add("open");
+  document.getElementById("drawer-overlay").classList.add("open");
+}
+function closeDrawer(){
+  document.getElementById("mobile-drawer").classList.remove("open");
+  document.getElementById("drawer-overlay").classList.remove("open");
+}
+document.getElementById("hamburger-btn").onclick = openDrawer;
+document.getElementById("drawer-overlay").onclick = closeDrawer;
+
+// Drawer button actions
+document.getElementById("drawer-matcher").onclick  = ()=>{ closeDrawer(); document.getElementById("matcher-overlay").classList.add("open"); };
+document.getElementById("drawer-bb").onclick       = ()=>{ closeDrawer(); document.getElementById("bb-panel").classList.toggle("open"); renderBestBets(); };
+document.getElementById("drawer-filter").onclick   = ()=>{ closeDrawer(); document.getElementById("filterbar").classList.toggle("open"); };
+document.getElementById("drawer-cat").onclick      = ()=>{ closeDrawer(); document.getElementById("catbar").classList.toggle("open"); };
+document.getElementById("drawer-compare").onclick  = ()=>{ closeDrawer(); toggleCompareMode(); };
+document.getElementById("drawer-shortlist").onclick= ()=>{ closeDrawer(); document.getElementById("sl-panel").classList.toggle("open"); };
+document.getElementById("drawer-help").onclick     = ()=>{ closeDrawer(); document.getElementById("help-overlay").classList.add("open"); };
+
+// Mobile search syncs with main search
+document.getElementById("search-mobile").oninput = function(){
+  const sEl = document.getElementById("search");
+  const cBtn = document.getElementById("clear-btn");
+  sEl.value = this.value;
+  searchQuery = this.value.trim();
+  cBtn.style.display = searchQuery ? "block" : "none";
+  updateURL(); renderTreemap();
+};
+
+// Close drawer on swipe down
+let touchStartY = 0;
+document.getElementById("mobile-drawer").addEventListener("touchstart", e=>{ touchStartY = e.touches[0].clientY; }, {passive:true});
+document.getElementById("mobile-drawer").addEventListener("touchend", e=>{
+  if(e.changedTouches[0].clientY - touchStartY > 60) closeDrawer();
+}, {passive:true});
+
 
 window.addEventListener("resize",()=>{clearTimeout(window._resizeTimer);window._resizeTimer=setTimeout(renderTreemap,120);});
 </script>
