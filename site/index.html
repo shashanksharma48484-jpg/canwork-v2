@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -198,6 +198,115 @@
     /* TOAST */
     #toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #2e2e2e;border-radius:6px;padding:7px 16px;font-size:0.72rem;color:#ccc;z-index:999;opacity:0;transition:opacity 0.25s;pointer-events:none}
     #toast.show{opacity:1}
+
+    /* ── NOC MATCHER ── */
+    #matcher-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:600;align-items:center;justify-content:center;padding:16px}
+    #matcher-overlay.open{display:flex}
+    #matcher-box{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:22px 20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative}
+    #matcher-close{position:absolute;top:10px;right:12px;background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer}
+    #matcher-close:hover{color:#fff}
+    #matcher-box h2{font-size:1rem;color:#fff;margin-bottom:4px}
+    #matcher-box .m-sub{font-size:0.7rem;color:#444;margin-bottom:14px;line-height:1.5}
+    .m-field{margin-bottom:12px}
+    .m-field label{display:block;font-size:0.72rem;color:#888;margin-bottom:5px}
+    .m-field input,.m-field select{width:100%;padding:8px 11px;border-radius:6px;border:1px solid #2a2a2a;background:#0f0f0f;color:#eee;font-size:0.82rem;outline:none;transition:border-color 0.2s}
+    .m-field input:focus,.m-field select:focus{border-color:#ff6b35}
+    .m-field input::placeholder{color:#333}
+    #matcher-go{width:100%;padding:10px;border-radius:7px;background:#ff6b35;color:#fff;border:none;font-size:0.85rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background 0.15s}
+    #matcher-go:hover{background:#e05a28}
+    /* disclaimer box */
+    .m-disclaimer{background:#0f0900;border:1px solid #3a1e00;border-radius:6px;padding:9px 12px;margin-bottom:14px;font-size:0.68rem;color:#a06020;line-height:1.6}
+    .m-disclaimer strong{color:#d07030;display:block;margin-bottom:2px}
+    /* results */
+    #match-results{margin-top:16px}
+    .mr-header{font-size:0.72rem;color:#555;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1a1a1a}
+    .mr-header span{color:#ff6b35;font-weight:700}
+    .mr-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid #1a1a1a;border-radius:7px;margin-bottom:5px;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+    .mr-item:hover{border-color:#2e2e2e;background:#0f0f0f}
+    .mr-rank{font-size:0.68rem;color:#2a2a2a;width:18px;flex-shrink:0;text-align:right;font-weight:700}
+    .mr-info{flex:1;min-width:0}
+    .mr-title{font-size:0.76rem;color:#ccc;line-height:1.3;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mr-meta{font-size:0.62rem;color:#3a3a3a}
+    .mr-bars{width:80px;flex-shrink:0}
+    .mr-rel-wrap{background:#1a1a1a;border-radius:2px;height:4px;margin-bottom:3px;overflow:hidden}
+    .mr-rel-bar{height:100%;border-radius:2px;background:#ff6b35}
+    .mr-rel-label{font-size:0.58rem;color:#444;text-align:right}
+    .mr-opp{font-size:0.8rem;font-weight:700;width:24px;text-align:right;flex-shrink:0}
+    .mr-add{padding:3px 8px;border-radius:4px;border:1px solid #2a2a2a;background:none;color:#555;font-size:0.62rem;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all 0.15s}
+    .mr-add:hover{border-color:#f4a261;color:#f4a261}
+    .mr-add.saved{border-color:#f4a261;color:#f4a261;background:#1a1000}
+    .mr-empty{text-align:center;color:#2a2a2a;font-size:0.8rem;padding:20px 0}
+    @media(max-width:768px){#matcher-box{padding:16px 14px;max-height:95vh}}
+
+
+    /* ── MOBILE RESPONSIVE ── */
+    @media (max-width: 768px) {
+      /* Header: stack logo + credit on one line, controls below */
+      header { padding: 8px 10px; gap: 6px; }
+      h1 { font-size: 1rem; }
+
+      /* Hide less critical tab buttons on mobile, keep key ones */
+      .tab-btn[data-metric="transferability_score"],
+      .tab-btn[data-metric="teer"] { display: none; }
+
+      /* Smaller control buttons */
+      .tab-btn { padding: 4px 8px; font-size: 0.68rem; }
+      .icon-btn { padding: 4px 7px; font-size: 0.68rem; }
+      #search { width: 140px; font-size: 0.72rem; }
+
+      /* Preset bar: horizontal scroll instead of wrapping */
+      #presetbar { flex-wrap: nowrap; overflow-x: auto; padding: 5px 10px; gap: 5px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      #presetbar::-webkit-scrollbar { display: none; }
+      .preset-btn { flex-shrink: 0; font-size: 0.65rem; padding: 3px 8px; }
+
+      /* Category bar: horizontal scroll */
+      #catbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      #catbar::-webkit-scrollbar { display: none; }
+      .cat-btn { flex-shrink: 0; }
+
+      /* Filter bar: stack nicely */
+      #filterbar { gap: 8px; }
+      .rs { width: 70px; }
+
+      /* Detail panel: full width on mobile */
+      #panel { width: 100vw; right: -100vw; }
+      #panel.open { right: 0; }
+
+      /* Best bets panel: full width on mobile */
+      #bb-panel { width: 100vw; left: -100vw; }
+      #bb-panel.open { left: 0; }
+
+      /* Shortlist panel: full width */
+      #sl-panel { width: 100vw; right: -100vw; }
+      #sl-panel.open { right: 0; }
+
+      /* Panel content padding so text doesn't hug edge */
+      #panel { padding: 16px 14px; }
+      #panel h2 { font-size: 0.88rem; }
+      .s-label { width: 100px; font-size: 0.68rem; }
+
+      /* Compare bar at bottom */
+      #compare-bar { padding: 6px 10px; gap: 6px; }
+      .cmp-chip { font-size: 0.63rem; padding: 3px 7px; }
+
+      /* Legend smaller on mobile */
+      #legend { bottom: 8px; left: 8px; padding: 4px 7px; }
+
+      /* Subbar */
+      #subbar { font-size: 0.62rem; padding: 3px 10px; }
+
+      /* Disclaimer */
+      #disclaimer { font-size: 0.62rem; padding: 3px 10px; }
+    }
+
+    @media (max-width: 480px) {
+      /* Extra small phones */
+      .tab-btn[data-metric="demand_score"],
+      .tab-btn[data-metric="income_score"] { display: none; }
+      h1 { font-size: 0.9rem; }
+      #search { width: 120px; }
+    }
+
   </style>
 </head>
 <body>
@@ -209,7 +318,7 @@
 
 <header>
   <h1>🍁 CanWork <span>Visualizer</span></h1>
-  <a href="https://www.linkedin.com/in/shashank1885" target="_blank" style="font-size:0.65rem;color:#333;text-decoration:none;white-space:nowrap;transition:color 0.15s;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#333'">by Shashank Sharma 🍁</a>
+  <a href="https://www.linkedin.com/in/shashank-sharma-canada/" target="_blank" style="font-size:0.65rem;color:#333;text-decoration:none;white-space:nowrap;transition:color 0.15s;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#333'">by Shashank Sharma</a>
   <div class="controls">
     <button class="tab-btn active" data-metric="opportunity_score">⭐ Opportunity</button>
     <button class="tab-btn" data-metric="ai_risk">🤖 AI Risk</button>
@@ -222,6 +331,7 @@
     <button class="icon-btn" id="filter-btn">⚙️ Filters</button>
     <button class="icon-btn" id="cat-btn">🗂️ Categories</button>
     <button class="icon-btn" id="cmp-mode-btn">⚖️ Compare</button>
+    <button class="icon-btn" id="matcher-btn" style="background:#1a1000;border-color:#ff6b35;color:#ff6b35;font-weight:600">🎯 Match My NOC</button>
     <button class="icon-btn" id="sl-btn">📋 Shortlist <span id="sl-count"></span></button>
     <div class="search-wrap">
       <span class="s-icon">🔍</span>
@@ -280,6 +390,9 @@
   <div style="color:#333">Score 0–10</div>
   <div class="leg-bar" id="leg-bar"></div>
   <div style="display:flex;justify-content:space-between;margin-top:2px;color:#333"><span>Low</span><span>High</span></div>
+  <div style="margin-top:5px;border-top:1px solid #1a1a1a;padding-top:4px;font-size:0.6rem;color:#2a2a2a">
+    <a href="https://www.linkedin.com/in/shashank-sharma-canada/" target="_blank" style="color:#2a2a2a;text-decoration:none;" onmouseover="this.style.color='#ff6b35'" onmouseout="this.style.color='#2a2a2a'">© Shashank Sharma</a>
+  </div>
 </div>
 
 <!-- DETAIL PANEL -->
@@ -350,6 +463,42 @@
     <div class="hs"><h3>🔍 Tips</h3><ul><li>Tile SIZE reflects the score — bigger = higher score for that dimension</li><li><kbd>/</kbd> focus search · <kbd>Esc</kbd> clear · click tile for full details</li><li>URL updates with filters so you can share/bookmark a filtered view</li></ul></div>
     <hr class="hd"/>
     <div class="hs" style="background:#0f0900;border:1px solid #2e1e00;border-radius:5px;padding:9px 11px"><h3 style="color:#d07030">⚠️ Disclaimer</h3><p>AI-generated estimates for <strong>study purposes only</strong>. Not career advice. Verify with a licensed professional.</p></div>
+  </div>
+</div>
+
+
+<!-- NOC MATCHER MODAL -->
+<div id="matcher-overlay">
+  <div id="matcher-box">
+    <button id="matcher-close">×</button>
+    <h2>🎯 Find Your Best NOC Match</h2>
+    <p class="m-sub">Enter your background and we'll rank the most relevant Canadian NOC 2021 occupations for you.</p>
+
+    <div class="m-disclaimer">
+      <strong>⚠️ Important Disclaimer</strong>
+      This tool provides a <em>keyword-based similarity match only</em> — it is <strong>not</strong> professional career, immigration, or legal advice. Results are for exploratory and educational purposes only. NOC classification for immigration or employment purposes must be determined by a <strong>licensed immigration consultant (RCIC), regulated professional, or authorized employer</strong>. Always consult a qualified practitioner before making any career or immigration decision.
+    </div>
+
+    <div class="m-field">
+      <label>Your most recent job title</label>
+      <input type="text" id="m-title" placeholder="e.g. Software Engineer, Bank Manager, Nurse…" autocomplete="off"/>
+    </div>
+    <div class="m-field">
+      <label>Your industry or domain</label>
+      <input type="text" id="m-domain" placeholder="e.g. Banking, Healthcare, Construction, IT…" autocomplete="off"/>
+    </div>
+    <div class="m-field">
+      <label>Years of experience (optional)</label>
+      <select id="m-exp">
+        <option value="">— Select —</option>
+        <option value="0">Less than 1 year</option>
+        <option value="1">1–3 years</option>
+        <option value="3">3–7 years</option>
+        <option value="7">7+ years</option>
+      </select>
+    </div>
+    <button id="matcher-go">🔍 Find Matching NOCs →</button>
+    <div id="match-results"></div>
   </div>
 </div>
 
@@ -913,6 +1062,172 @@ function exportShortlistPDF() {
   doc.save("canwork_shortlist.pdf");
   showToast("PDF downloaded ✓");
 }
+
+
+// ── NOC MATCHER ─────────────────────────────────────────────
+const DOMAIN_KEYWORDS = {
+  "banking":["bank","financ","credit","loan","treasury","forex","teller","audit","mortgage","insurance","invest","wealth","compliance","aml","kyc"],
+  "finance":["financ","account","audit","tax","budget","payroll","invest","trading","portfolio","risk","actuar"],
+  "healthcare":["health","nurs","doctor","physician","clinic","hospital","medical","patient","care","therapy","pharma","dental","lab","diagnos"],
+  "it":["software","developer","programmer","data","cloud","network","security","devops","database","system","web","app","tech","cyber","ai","machine"],
+  "construction":["construct","build","carpenter","plumb","electric","weld","mason","roofer","hvac","civil","surveyor","architect","site"],
+  "education":["teach","instruct","professor","tutor","school","curricul","train","coach","counsel","librar","social work"],
+  "engineering":["engineer","mechanic","electr","chemical","civil","industri","manufactur","process","quality","cad","design"],
+  "logistics":["logistics","supply chain","warehouse","transport","driver","dispatch","freight","customs","import","export","shipping"],
+  "hr":["human resource","recruit","talent","hr ","people","payroll","benefit","labour","workforce","staffing"],
+  "sales":["sales","retail","customer","account manager","business develop","marketing","brand","advertis","market"],
+  "management":["manager","director","supervisor","coordinator","lead","head","chief","vp ","president","executive","officer"],
+  "agriculture":["farm","agricult","crop","livestock","forest","fish","harvest","horticultur","greenhouse"],
+  "manufacturing":["manufactur","assembl","production","machine","operator","process","quality control","plant"],
+  "legal":["lawyer","legal","paralegal","court","judge","compliance","regulatory","policy","contract"],
+};
+
+function tokenize(str){
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(t=>t.length>2);
+}
+
+function scoreMatch(node, titleTokens, domainTokens, allTokens) {
+  const nocTitle = node.title.toLowerCase();
+  const nocCat   = (node.category_label||"").toLowerCase();
+  const nocTeer  = node.teer;
+  let score = 0;
+
+  // Direct title token matches (weighted highest)
+  titleTokens.forEach(tok => {
+    if (nocTitle.includes(tok)) score += tok.length > 5 ? 12 : 7;
+  });
+
+  // Domain token matches in category
+  domainTokens.forEach(tok => {
+    if (nocCat.includes(tok))   score += 5;
+    if (nocTitle.includes(tok)) score += 4;
+  });
+
+  // All token partial matches
+  allTokens.forEach(tok => {
+    if (nocTitle.includes(tok)) score += 2;
+    if (nocCat.includes(tok))   score += 1;
+  });
+
+  // Bonus: high opportunity score nudges relevance
+  if (node.opportunity_score >= 6) score += 2;
+  if (node.opportunity_score >= 5) score += 1;
+
+  return score;
+}
+
+function runMatcher() {
+  const titleRaw  = document.getElementById("m-title").value.trim();
+  const domainRaw = document.getElementById("m-domain").value.trim();
+  const expVal    = document.getElementById("m-exp").value; // "", "0", "1", "3", "7"
+  if (!titleRaw) { showToast("Please enter your job title"); return; }
+
+  // Map experience → preferred TEER levels + penalties
+  // TEER 0 = Senior Mgmt, TEER 1 = University, TEER 2 = College 2yr+
+  // TEER 3 = College <2yr, TEER 4 = HS, TEER 5 = No formal
+  const TEER_PREF = {
+    "":  { bonus:[0,1,2,3,4,5], penalty:{} },           // no filter
+    "0": { bonus:[4,5,3],       penalty:{"0":-20,"1":-12,"2":-6} },  // <1yr: entry level
+    "1": { bonus:[3,4,2],       penalty:{"0":-15,"1":-8} },           // 1-3yr: mid-entry
+    "3": { bonus:[2,1,3],       penalty:{"0":-8,  "5":-5} },          // 3-7yr: mid-senior
+    "7": { bonus:[0,1,2],       penalty:{"4":-8,  "5":-12} },         // 7+yr: senior/management
+  };
+  const teerPref = TEER_PREF[expVal] || TEER_PREF[""];
+
+  const titleTokens  = tokenize(titleRaw);
+  const domainTokens = tokenize(domainRaw);
+
+  const expandedDomain = [...domainTokens];
+  Object.entries(DOMAIN_KEYWORDS).forEach(([key, kws]) => {
+    if (domainTokens.some(t => key.includes(t) || t.includes(key))) expandedDomain.push(...kws);
+  });
+  Object.entries(DOMAIN_KEYWORDS).forEach(([key, kws]) => {
+    if (titleTokens.some(t => key.includes(t) || t.includes(key))) expandedDomain.push(...kws);
+  });
+
+  const allTokens = [...new Set([...titleTokens, ...expandedDomain])];
+
+  const scored = allData
+    .filter(n => !isBadScore(n))
+    .map(n => {
+      let s = scoreMatch(n, titleTokens, expandedDomain, allTokens);
+      // Apply TEER experience penalty/bonus
+      const teerStr = String(n.teer);
+      if (teerPref.penalty[teerStr]) s += teerPref.penalty[teerStr];
+      // Small bonus for preferred TEER levels
+      const prefRank = teerPref.bonus.indexOf(parseInt(teerStr));
+      if (prefRank === 0) s += 8;
+      else if (prefRank === 1) s += 5;
+      else if (prefRank === 2) s += 2;
+      return { node: n, score: s };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15);
+
+  const maxScore = scored[0]?.score || 1;
+  const resultsEl = document.getElementById("match-results");
+
+  if (!scored.length) {
+    resultsEl.innerHTML = '<div class="mr-empty">No strong matches found.<br/>Try different keywords.</div>';
+    return;
+  }
+
+  // Experience label for display
+  const expLabel = {"":"", "0":"< 1 yr exp", "1":"1–3 yrs exp", "3":"3–7 yrs exp", "7":"7+ yrs exp"}[expVal] || "";
+
+  let html = `<div class="mr-header">Top <span>${scored.length}</span> NOC matches for "<em>${titleRaw}${domainRaw ? " · " + domainRaw : ""}${expLabel ? " · " + expLabel : ""}</em>"</div>`;
+
+  scored.forEach((item, i) => {
+    const n   = item.node;
+    const rel = Math.round((item.score / maxScore) * 100);
+    const oc  = n.opportunity_score >= 0 ? n.opportunity_score : "—";
+    const ocColor = n.opportunity_score >= 0 ? scoreColor(n.opportunity_score) : "#333";
+    const inSL = isInShortlist(n.slug);
+    const teerBadge = ["🟣","🔵","🩵","🟠","🟡","🟢"][parseInt(n.teer)] || "⚪";
+
+    html += `
+      <div class="mr-item" onclick="openPanel(this._nd);document.getElementById('matcher-overlay').classList.remove('open')" data-mi="${i}">
+        <div class="mr-rank">${i+1}</div>
+        <div class="mr-info">
+          <div class="mr-title">${n.title}</div>
+          <div class="mr-meta">NOC ${n.code} · ${teerBadge} TEER ${n.teer} · ${n.category_label.split(",")[0]}</div>
+        </div>
+        <div class="mr-bars">
+          <div class="mr-rel-wrap"><div class="mr-rel-bar" style="width:${rel}%"></div></div>
+          <div class="mr-rel-label">${rel}% match</div>
+        </div>
+        <div class="mr-opp" style="color:${ocColor}">${oc}</div>
+        <button class="mr-add ${inSL?"saved":""}" onclick="event.stopPropagation();toggleShortlist(this.closest('.mr-item')._nd);this.classList.toggle('saved');this.textContent=this.classList.contains('saved')?'★ Saved':'+ Save'">
+          ${inSL?"★ Saved":"+ Save"}
+        </button>
+      </div>`;
+  });
+
+  resultsEl.innerHTML = html;
+  scored.forEach((item, i) => {
+    const el = resultsEl.querySelectorAll(".mr-item")[i];
+    if (el) el._nd = item.node;
+  });
+}
+
+// Wire matcher
+document.getElementById("matcher-btn").onclick = () => {
+  document.getElementById("matcher-overlay").classList.add("open");
+};
+document.getElementById("matcher-close").onclick = () => {
+  document.getElementById("matcher-overlay").classList.remove("open");
+};
+document.getElementById("matcher-overlay").onclick = function(e) {
+  if (e.target === this) this.classList.remove("open");
+};
+document.getElementById("matcher-go").onclick = runMatcher;
+document.getElementById("m-title").addEventListener("keydown", e => {
+  if (e.key === "Enter") runMatcher();
+});
+document.getElementById("m-domain").addEventListener("keydown", e => {
+  if (e.key === "Enter") runMatcher();
+});
 
 window.addEventListener("resize",()=>{clearTimeout(window._resizeTimer);window._resizeTimer=setTimeout(renderTreemap,120);});
 </script>
